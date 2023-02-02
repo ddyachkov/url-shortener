@@ -7,7 +7,7 @@ import (
 )
 
 type Storage interface {
-	WriteData(string) int
+	WriteData(string) (int, error)
 	GetData(int) (string, error)
 }
 
@@ -24,10 +24,14 @@ func NewURLShortener(st Storage) URLShortener {
 
 // ReturnURI returns URI for received URL. If URL is invalid then returns error.
 func (shortener *URLShortener) ReturnURI(url string) (uri string, err error) {
-	if !validLink(url) {
-		return "", errors.New("URL is invalid")
+	_, err = ParseRequestURI(url)
+	if err != nil {
+		return "", err
 	}
-	id := shortener.storage.WriteData(url)
+	id, err := shortener.storage.WriteData(url)
+	if err != nil {
+		return "", err
+	}
 	return makeURI(id), nil
 }
 
@@ -39,17 +43,6 @@ func (shortener *URLShortener) GetFullURL(uri string) (url string, err error) {
 		return "", err
 	}
 	return url, nil
-}
-
-// validLink checks if URL is valid. RegExp - ^(http|https)://
-func validLink(link string) bool {
-	r, err := regexp.Compile("^(http|https)://")
-	if err != nil {
-		return false
-	}
-	link = strings.TrimSpace(link)
-
-	return r.MatchString(link)
 }
 
 // makeURI returns URI from data ID
