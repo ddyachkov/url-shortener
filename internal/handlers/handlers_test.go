@@ -72,8 +72,8 @@ func TestURLHandler_ServeHTTP(t *testing.T) {
 			handler.ServeHTTP(w, r)
 			res := w.Result()
 
-			assert.Equal(t, res.StatusCode, tt.want.code)
-			assert.Equal(t, res.Header.Get("Location"), tt.want.headerLocation)
+			assert.Equal(t, tt.want.code, res.StatusCode)
+			assert.Equal(t, tt.want.headerLocation, res.Header.Get("Location"))
 
 			defer res.Body.Close()
 			resBody, err := io.ReadAll(res.Body)
