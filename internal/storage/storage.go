@@ -18,7 +18,7 @@ func NewURLStorage() URLStorage {
 }
 
 // WriteData writes data into storage and returns a new ID. If data is already in storage, then return its ID.
-func (storage *URLStorage) WriteData(url string) (id int) {
+func (storage *URLStorage) WriteData(url string) (id int, err error) {
 	id, ok := storage.ids[url]
 	if ok {
 		return id
@@ -28,7 +28,7 @@ func (storage *URLStorage) WriteData(url string) (id int) {
 	storage.urls[id] = url
 	storage.ids[url] = id
 
-	return id
+	return id, nil
 }
 
 // GetData returns data from storage. If data is not found then returns error.
