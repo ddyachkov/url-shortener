@@ -19,7 +19,7 @@ func main() {
 	defer cancel()
 
 	handler := handlers.NewURLHandler()
-	router.Method("POST", "/", handler)
+	router.Method(http.MethodPost, "/", handler)
 	router.Method("GET", "/{URI}", handler)
 	router.HandleFunc("/shutdown", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("Server is shutting down..."))
