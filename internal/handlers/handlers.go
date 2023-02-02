@@ -27,7 +27,7 @@ func (handler URLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case http.MethodPost:
 		url, err := io.ReadAll(r.Body)
 		if err != nil {
-			writeResponce(w, http.StatusBadRequest, err.Error())
+			http.Error(w, http.StatusBadRequest, err.Error())
 			return
 		}
 		uri, err := handler.shortener.ReturnURI(string(url))
