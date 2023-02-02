@@ -2,6 +2,7 @@ package app
 
 import (
 	"errors"
+	"net/url"
 	"regexp"
 	"strings"
 )
@@ -24,7 +25,7 @@ func NewURLShortener(st Storage) URLShortener {
 
 // ReturnURI returns URI for received URL. If URL is invalid then returns error.
 func (shortener *URLShortener) ReturnURI(url string) (uri string, err error) {
-	_, err = ParseRequestURI(url)
+	_, err = url.ParseRequestURI(url)
 	if err != nil {
 		return "", err
 	}
