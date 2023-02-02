@@ -12,25 +12,32 @@ func TestURLStorage_WriteData(t *testing.T) {
 		url string
 	}
 	tests := []struct {
-		name   string
-		args   args
-		wantID int
+		name    string
+		args    args
+		wantID  int
+		wantErr error
 	}{
 		{
-			name:   "Positive_NewData",
-			args:   args{url: "https://www.google.ru"},
-			wantID: 1,
+			name:    "Positive_NewData",
+			args:    args{url: "https://www.google.ru"},
+			wantID:  1,
+			wantErr: false,
 		},
 		{
-			name:   "Positive_SameData",
-			args:   args{url: "https://www.google.ru"},
-			wantID: 1,
+			name:    "Positive_SameData",
+			args:    args{url: "https://www.google.ru"},
+			wantID:  1,
+			wantErr: false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotID := storage.WriteData(tt.args.url)
-			assert.Equal(t, gotID, tt.wantID)
+			gotID, err := storage.WriteData(tt.args.url)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("URLStorage.GetData() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			assert.Equal(t, tt.wantID, gotID)
 		})
 	}
 }
@@ -68,7 +75,7 @@ func TestURLStorage_GetData(t *testing.T) {
 				t.Errorf("URLStorage.GetData() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			assert.Equal(t, gotURL, tt.wantURL)
+			assert.Equal(t, tt.wantURL, gotURL)
 		})
 	}
 }
