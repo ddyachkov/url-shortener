@@ -15,7 +15,7 @@ func TestURLStorage_WriteData(t *testing.T) {
 		name    string
 		args    args
 		wantID  int
-		wantErr error
+		wantErr bool
 	}{
 		{
 			name:    "Positive_NewData",
@@ -45,7 +45,10 @@ func TestURLStorage_WriteData(t *testing.T) {
 func TestURLStorage_GetData(t *testing.T) {
 	storage := NewURLStorage()
 	url := "https://www.google.ru"
-	gotID := storage.WriteData(url)
+	gotID, err := storage.WriteData(url)
+	if err != nil {
+		t.Fatal(err)
+	}
 	type args struct {
 		id int
 	}

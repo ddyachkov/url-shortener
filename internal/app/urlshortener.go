@@ -1,11 +1,6 @@
 package app
 
-import (
-	"errors"
-	"net/url"
-	"regexp"
-	"strings"
-)
+import netUrl "net/url"
 
 type Storage interface {
 	WriteData(string) (int, error)
@@ -25,7 +20,7 @@ func NewURLShortener(st Storage) URLShortener {
 
 // ReturnURI returns URI for received URL. If URL is invalid then returns error.
 func (shortener *URLShortener) ReturnURI(url string) (uri string, err error) {
-	_, err = url.ParseRequestURI(url)
+	_, err = netUrl.ParseRequestURI(url)
 	if err != nil {
 		return "", err
 	}

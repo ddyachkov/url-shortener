@@ -21,7 +21,7 @@ func NewURLStorage() URLStorage {
 func (storage *URLStorage) WriteData(url string) (id int, err error) {
 	id, ok := storage.ids[url]
 	if ok {
-		return id
+		return id, nil
 	}
 	storage.lastID += 1
 	id = storage.lastID
