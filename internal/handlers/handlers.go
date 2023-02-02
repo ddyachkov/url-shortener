@@ -27,7 +27,7 @@ func (handler URLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case http.MethodPost:
 		url, err := io.ReadAll(r.Body)
 		if err != nil {
-			http.Error(w, http.StatusBadRequest, err.Error())
+			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 		uri, err := handler.shortener.ReturnURI(string(url))
@@ -40,7 +40,7 @@ func (handler URLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		uri := r.URL.Path[1:]
 		url, err := handler.shortener.GetFullURL(uri)
 		if err != nil {
-			writeResponce(w, http.StatusBadRequest, err.Error())
+			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 		http.Redirect(w, r, url, http.StatusTemporaryRedirect)
