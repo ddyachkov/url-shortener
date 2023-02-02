@@ -60,7 +60,7 @@ func TestURLHandler_ServeHTTP(t *testing.T) {
 			path:   "/c",
 			want: want{
 				code: http.StatusBadRequest,
-				text: "URL not found",
+				text: "URL not found\n",
 			},
 		},
 	}
@@ -80,7 +80,7 @@ func TestURLHandler_ServeHTTP(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			assert.Equal(t, string(resBody), tt.want.text)
+			assert.Equal(t, tt.want.text, string(resBody))
 		})
 	}
 }
