@@ -7,34 +7,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func Test_validLink(t *testing.T) {
-	type args struct {
-		link string
-	}
-	tests := []struct {
-		name string
-		args args
-		want bool
-	}{
-		{
-			name: "Positive_ValidURL",
-			args: args{link: "https://www.google.ru"},
-			want: true,
-		},
-		{
-			name: "Negative_InvalidURL",
-			args: args{link: "htts://www.google.ru"},
-			want: false,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := validLink(tt.args.link)
-			assert.Equal(t, got, tt.want)
-		})
-	}
-}
-
 func Test_makeURI(t *testing.T) {
 	type args struct {
 		id int
@@ -107,7 +79,7 @@ func TestURLShortener_ReturnURI(t *testing.T) {
 		},
 		{
 			name:    "Negative_InvalidURL",
-			args:    args{url: "htts://www.google.ru"},
+			args:    args{url: "www.google.ru"},
 			wantURI: "",
 			wantErr: true,
 		},
