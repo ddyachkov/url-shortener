@@ -51,7 +51,7 @@ func (handler URLGetHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	uri := r.URL.Path[1:]
 	url, err := handler.shortener.GetFullURL(uri)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}
 	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
