@@ -115,7 +115,7 @@ func TestURLGetHandler_ServeHTTP(t *testing.T) {
 			method: http.MethodGet,
 			path:   "/c",
 			want: want{
-				code: http.StatusBadRequest,
+				code: http.StatusNotFound,
 				text: "URL not found\n",
 			},
 		},
