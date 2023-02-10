@@ -18,7 +18,8 @@ func TestURLHandler_ServeHTTP(t *testing.T) {
 	service := app.NewURLShortener(&storage)
 	handler := NewURLHandler(&service)
 	type header struct {
-		location string
+		contentType string
+		location    string
 	}
 	type want struct {
 		code   int
@@ -29,6 +30,7 @@ func TestURLHandler_ServeHTTP(t *testing.T) {
 		name   string
 		method string
 		path   string
+		header header
 		body   string
 		want   want
 	}{
@@ -50,6 +52,9 @@ func TestURLHandler_ServeHTTP(t *testing.T) {
 			want: want{
 				code: http.StatusBadRequest,
 				text: "parse \"www.google.ru\": invalid URI for request\n",
+				header: header{
+					contentType: "text/plain; charset=utf-8",
+				},
 			},
 		},
 		{
@@ -60,6 +65,9 @@ func TestURLHandler_ServeHTTP(t *testing.T) {
 			want: want{
 				code: http.StatusCreated,
 				text: "{\"result\":\"http://localhost:8080/b\"}",
+				header: header{
+					contentType: "application/json",
+				},
 			},
 		},
 		{
@@ -70,6 +78,9 @@ func TestURLHandler_ServeHTTP(t *testing.T) {
 			want: want{
 				code: http.StatusBadRequest,
 				text: "parse \"www.google.ru\": invalid URI for request\n",
+				header: header{
+					contentType: "text/plain; charset=utf-8",
+				},
 			},
 		},
 		{
@@ -80,7 +91,8 @@ func TestURLHandler_ServeHTTP(t *testing.T) {
 				code: http.StatusTemporaryRedirect,
 				text: "<a href=\"https://www.google.ru\">Temporary Redirect</a>.\n\n",
 				header: header{
-					location: "https://www.google.ru",
+					contentType: "text/html; charset=utf-8",
+					location:    "https://www.google.ru",
 				},
 			},
 		},
@@ -91,6 +103,9 @@ func TestURLHandler_ServeHTTP(t *testing.T) {
 			want: want{
 				code: http.StatusNotFound,
 				text: "URL not found\n",
+				header: header{
+					contentType: "text/plain; charset=utf-8",
+				},
 			},
 		},
 	}
@@ -103,6 +118,7 @@ func TestURLHandler_ServeHTTP(t *testing.T) {
 			res := w.Result()
 
 			assert.Equal(t, tt.want.code, res.StatusCode)
+			assert.Equal(t, tt.want.header.contentType, res.Header.Get("Content-Type"))
 			assert.Equal(t, tt.want.header.location, res.Header.Get("Location"))
 
 			defer res.Body.Close()
