@@ -18,8 +18,7 @@ func TestURLHandler_ServeHTTP(t *testing.T) {
 	service := app.NewURLShortener(&storage)
 	handler := NewURLHandler(&service)
 	type header struct {
-		contentType string
-		location    string
+		location string
 	}
 	type want struct {
 		code   int
@@ -30,7 +29,6 @@ func TestURLHandler_ServeHTTP(t *testing.T) {
 		name   string
 		method string
 		path   string
-		header header
 		body   string
 		want   want
 	}{
@@ -38,36 +36,17 @@ func TestURLHandler_ServeHTTP(t *testing.T) {
 			name:   "Positive_POST_Text_Code201",
 			method: http.MethodPost,
 			path:   "/",
-			header: header{
-				contentType: "text/plain",
-			},
-			body: "https://www.google.ru",
+			body:   "https://www.google.ru",
 			want: want{
 				code: http.StatusCreated,
 				text: "http://localhost:8080/b",
 			},
 		},
 		{
-			name:   "Negative_POST_Text_Code415",
-			method: http.MethodPost,
-			path:   "/",
-			header: header{
-				contentType: "application/json",
-			},
-			body: "https://www.google.ru",
-			want: want{
-				code: http.StatusUnsupportedMediaType,
-				text: "Unsupported Media Type\n",
-			},
-		},
-		{
 			name:   "Negative_POST_Text_Code400",
 			method: http.MethodPost,
 			path:   "/",
-			header: header{
-				contentType: "text/plain",
-			},
-			body: "www.google.ru",
+			body:   "www.google.ru",
 			want: want{
 				code: http.StatusBadRequest,
 				text: "parse \"www.google.ru\": invalid URI for request\n",
@@ -77,36 +56,17 @@ func TestURLHandler_ServeHTTP(t *testing.T) {
 			name:   "Positive_POST_JSON_Code201",
 			method: http.MethodPost,
 			path:   "/api/shorten",
-			header: header{
-				contentType: "application/json",
-			},
-			body: "{\"URL\":\"https://www.google.ru\"}",
+			body:   "{\"URL\":\"https://www.google.ru\"}",
 			want: want{
 				code: http.StatusCreated,
 				text: "{\"result\":\"http://localhost:8080/b\"}",
 			},
 		},
 		{
-			name:   "Negative_POST_JSON_Code415",
-			method: http.MethodPost,
-			path:   "/api/shorten",
-			header: header{
-				contentType: "text/plain",
-			},
-			body: "{\"URL\":\"https://www.google.ru\"}",
-			want: want{
-				code: http.StatusUnsupportedMediaType,
-				text: "Unsupported Media Type\n",
-			},
-		},
-		{
 			name:   "Negative_POST_JSON_Code400",
 			method: http.MethodPost,
 			path:   "/api/shorten",
-			header: header{
-				contentType: "application/json",
-			},
-			body: "{\"URL\":\"www.google.ru\"}",
+			body:   "{\"URL\":\"www.google.ru\"}",
 			want: want{
 				code: http.StatusBadRequest,
 				text: "parse \"www.google.ru\": invalid URI for request\n",
@@ -139,7 +99,6 @@ func TestURLHandler_ServeHTTP(t *testing.T) {
 			w := httptest.NewRecorder()
 			bodyReader := strings.NewReader(tt.body)
 			r := httptest.NewRequest(tt.method, tt.path, bodyReader)
-			r.Header.Set("Content-Type", tt.header.contentType)
 			handler.ServeHTTP(w, r)
 			res := w.Result()
 
