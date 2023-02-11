@@ -8,15 +8,17 @@ import (
 	"testing"
 
 	"github.com/ddyachkov/url-shortener/internal/app"
+	"github.com/ddyachkov/url-shortener/internal/config"
 	"github.com/ddyachkov/url-shortener/internal/storage"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestURLHandler_ServeHTTP(t *testing.T) {
+	config := config.GetConfig()
 	storage := storage.NewURLStorage()
-	service := app.NewURLShortener(&storage)
-	handler := NewURLHandler(&service)
+	shortener := app.NewURLShortener(&storage)
+	handler := NewURLHandler(&shortener, &config)
 	type header struct {
 		contentType string
 		location    string
@@ -41,7 +43,7 @@ func TestURLHandler_ServeHTTP(t *testing.T) {
 			body:   "https://www.google.ru",
 			want: want{
 				code: http.StatusCreated,
-				text: "http://localhost:8080/b",
+				text: config.BaseURL + "b",
 			},
 		},
 		{
@@ -64,7 +66,7 @@ func TestURLHandler_ServeHTTP(t *testing.T) {
 			body:   "{\"URL\":\"https://www.google.ru\"}",
 			want: want{
 				code: http.StatusCreated,
-				text: "{\"result\":\"http://localhost:8080/b\"}",
+				text: "{\"result\":\"" + config.BaseURL + "b\"}",
 				header: header{
 					contentType: "application/json",
 				},

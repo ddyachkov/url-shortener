@@ -6,18 +6,21 @@ import (
 	"net/http"
 
 	"github.com/ddyachkov/url-shortener/internal/app"
+	"github.com/ddyachkov/url-shortener/internal/config"
 	"github.com/go-chi/chi"
 )
 
 type handler struct {
-	shortener *app.URLShortener //shortener logic
+	service *app.URLShortener
+	config  *config.Config
 }
 
-func NewURLHandler(service *app.URLShortener) http.Handler {
+func NewURLHandler(shortener *app.URLShortener, cfg *config.Config) http.Handler {
 	router := chi.NewRouter()
 
 	h := handler{
-		shortener: service,
+		service: shortener,
+		config:  cfg,
 	}
 
 	router.Post("/", h.ReturnTextShortURL)
@@ -35,13 +38,13 @@ func (h handler) ReturnTextShortURL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	uri, err := h.shortener.ReturnURI(string(body))
+	uri, err := h.service.ReturnURI(string(body))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	writeResponse(w, []byte("http://localhost:8080/"+uri), http.StatusCreated)
+	writeResponse(w, []byte(h.config.BaseURL+uri), http.StatusCreated)
 }
 
 func (h handler) ReturnJSONShortURL(w http.ResponseWriter, r *http.Request) {
@@ -59,7 +62,7 @@ func (h handler) ReturnJSONShortURL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	uri, err := h.shortener.ReturnURI(requestBody.URL)
+	uri, err := h.service.ReturnURI(requestBody.URL)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -67,7 +70,7 @@ func (h handler) ReturnJSONShortURL(w http.ResponseWriter, r *http.Request) {
 
 	responceBody := struct {
 		Result string `json:"result"`
-	}{Result: "http://localhost:8080/" + uri}
+	}{Result: h.config.BaseURL + uri}
 	responce, err := json.Marshal(responceBody)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -80,7 +83,7 @@ func (h handler) ReturnJSONShortURL(w http.ResponseWriter, r *http.Request) {
 
 func (h handler) RedirectToFullURL(w http.ResponseWriter, r *http.Request) {
 	uri := chi.URLParam(r, "URI")
-	url, err := h.shortener.GetFullURL(uri)
+	url, err := h.service.GetFullURL(uri)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
@@ -88,7 +91,6 @@ func (h handler) RedirectToFullURL(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
 }
 
-// writeResponse writes http code to header and text to body.
 func writeResponse(w http.ResponseWriter, text []byte, code int) {
 	w.WriteHeader(code)
 	w.Write(text)
