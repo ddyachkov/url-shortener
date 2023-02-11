@@ -43,7 +43,7 @@ func TestURLHandler_ServeHTTP(t *testing.T) {
 			body:   "https://www.google.ru",
 			want: want{
 				code: http.StatusCreated,
-				text: config.BaseURL + "b",
+				text: config.BaseURL + "/b",
 			},
 		},
 		{
@@ -66,7 +66,7 @@ func TestURLHandler_ServeHTTP(t *testing.T) {
 			body:   "{\"URL\":\"https://www.google.ru\"}",
 			want: want{
 				code: http.StatusCreated,
-				text: "{\"result\":\"" + config.BaseURL + "b\"}",
+				text: "{\"result\":\"" + config.BaseURL + "/b\"}",
 				header: header{
 					contentType: "application/json",
 				},

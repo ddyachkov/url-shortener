@@ -44,7 +44,7 @@ func (h handler) ReturnTextShortURL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeResponse(w, []byte(h.config.BaseURL+uri), http.StatusCreated)
+	writeResponse(w, []byte(h.config.BaseURL+"/"+uri), http.StatusCreated)
 }
 
 func (h handler) ReturnJSONShortURL(w http.ResponseWriter, r *http.Request) {
@@ -70,7 +70,7 @@ func (h handler) ReturnJSONShortURL(w http.ResponseWriter, r *http.Request) {
 
 	responceBody := struct {
 		Result string `json:"result"`
-	}{Result: h.config.BaseURL + uri}
+	}{Result: h.config.BaseURL + "/" + uri}
 	responce, err := json.Marshal(responceBody)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
