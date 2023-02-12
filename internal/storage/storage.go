@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"path/filepath"
 
 	"github.com/ddyachkov/url-shortener/internal/config"
 )
@@ -49,6 +50,14 @@ func (s URLStorage) GetData(id int) (url string, err error) {
 }
 
 func (s *URLStorage) LoadData() {
+	if _, err := os.Stat(s.config.StoragePath); os.IsNotExist(err) {
+		err := os.MkdirAll(filepath.Dir(s.config.StoragePath), os.ModePerm)
+		if err != nil {
+			log.Println(err.Error())
+			return
+		}
+	}
+
 	file, err := os.Open(s.config.StoragePath)
 	if err != nil {
 		log.Println(err.Error())
@@ -74,13 +83,6 @@ func (s *URLStorage) LoadData() {
 }
 
 func (s URLStorage) saveData(id int, url string) {
-	if _, err := os.Stat(s.config.StoragePath); os.IsNotExist(err) {
-		err := os.Mkdir(s.config.StoragePath, os.ModePerm)
-		if err != nil {
-			log.Println(err.Error())
-			return
-		}
-	}
 	file, err := os.OpenFile(s.config.StoragePath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, os.ModePerm)
 	if err != nil {
 		log.Println(err.Error())
