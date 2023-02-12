@@ -18,18 +18,17 @@ func Run() {
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, os.Interrupt)
 
-	config := config.GetServerConfig()
 	storage := storage.NewURLStorage()
 	storage.LoadData()
 
 	service := app.NewURLShortener(&storage)
 	server := http.Server{
 		Addr:    config.ServerAddress,
-		Handler: handler.NewURLHandler(&service, &config),
+		Handler: handler.NewURLHandler(&service),
 	}
 
 	go func() {
-		log.Println("server starting")
+		log.Println("Server starting...")
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatal(err)
 		}
@@ -42,5 +41,5 @@ func Run() {
 	if err := server.Shutdown(ctx); err != nil {
 		log.Fatal(err)
 	}
-	log.Println("server stopped")
+	log.Println("Server stopped")
 }

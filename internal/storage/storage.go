@@ -15,7 +15,6 @@ type URLStorage struct {
 	urls   map[int]string
 	ids    map[string]int
 	lastID int
-	config config.StorageConfig
 }
 
 func NewURLStorage() URLStorage {
@@ -23,7 +22,6 @@ func NewURLStorage() URLStorage {
 		urls:   make(map[int]string),
 		ids:    make(map[string]int),
 		lastID: 0,
-		config: config.GetStorageConfig(),
 	}
 }
 
@@ -50,15 +48,15 @@ func (s URLStorage) GetData(id int) (url string, err error) {
 }
 
 func (s *URLStorage) LoadData() {
-	if _, err := os.Stat(s.config.StoragePath); os.IsNotExist(err) {
-		err := os.MkdirAll(filepath.Dir(s.config.StoragePath), os.ModePerm)
+	if _, err := os.Stat(config.FileStoragePath); os.IsNotExist(err) {
+		err := os.MkdirAll(filepath.Dir(config.FileStoragePath), os.ModePerm)
 		if err != nil {
 			log.Println(err.Error())
 			return
 		}
 	}
 
-	file, err := os.Open(s.config.StoragePath)
+	file, err := os.Open(config.FileStoragePath)
 	if err != nil {
 		log.Println(err.Error())
 		return
@@ -83,7 +81,7 @@ func (s *URLStorage) LoadData() {
 }
 
 func (s URLStorage) saveData(id int, url string) {
-	file, err := os.OpenFile(s.config.StoragePath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, os.ModePerm)
+	file, err := os.OpenFile(config.FileStoragePath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, os.ModePerm)
 	if err != nil {
 		log.Println(err.Error())
 		return

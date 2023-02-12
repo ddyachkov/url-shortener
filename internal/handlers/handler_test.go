@@ -15,10 +15,9 @@ import (
 )
 
 func TestURLHandler_ServeHTTP(t *testing.T) {
-	config := config.GetServerConfig()
 	storage := storage.NewURLStorage()
 	shortener := app.NewURLShortener(&storage)
-	handler := NewURLHandler(&shortener, &config)
+	handler := NewURLHandler(&shortener)
 	type header struct {
 		contentType string
 		location    string
