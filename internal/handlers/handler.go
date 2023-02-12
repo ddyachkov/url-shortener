@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"compress/gzip"
 	"encoding/json"
 	"io"
 	"log"
@@ -33,9 +34,9 @@ func NewURLHandler(shortener *app.URLShortener) http.Handler {
 }
 
 func (h handler) ReturnTextShortURL(w http.ResponseWriter, r *http.Request) {
-	body, err := io.ReadAll(r.Body)
+	body, err := returnRequestBody(r)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -50,9 +51,9 @@ func (h handler) ReturnTextShortURL(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h handler) ReturnJSONShortURL(w http.ResponseWriter, r *http.Request) {
-	body, err := io.ReadAll(r.Body)
+	body, err := returnRequestBody(r)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -94,6 +95,27 @@ func (h handler) RedirectToFullURL(w http.ResponseWriter, r *http.Request) {
 
 	log.Println("RedirectToFullURL:", config.BaseURL+"/"+uri, "->", url)
 	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
+}
+
+func returnRequestBody(r *http.Request) (body []byte, err error) {
+	var reader io.Reader
+
+	if r.Header.Get(`Content-Encoding`) == `gzip` {
+		gz, err := gzip.NewReader(r.Body)
+		if err != nil {
+			return nil, err
+		}
+		reader = gz
+		defer gz.Close()
+	} else {
+		reader = r.Body
+	}
+
+	body, err = io.ReadAll(reader)
+	if err != nil {
+		return nil, err
+	}
+	return body, nil
 }
 
 func writeResponse(w http.ResponseWriter, text []byte, code int) {
