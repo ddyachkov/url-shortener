@@ -12,10 +12,10 @@ import (
 
 type handler struct {
 	service *app.URLShortener
-	config  *config.Config
+	config  *config.ServerConfig
 }
 
-func NewURLHandler(shortener *app.URLShortener, cfg *config.Config) http.Handler {
+func NewURLHandler(shortener *app.URLShortener, cfg *config.ServerConfig) http.Handler {
 	router := chi.NewRouter()
 
 	h := handler{

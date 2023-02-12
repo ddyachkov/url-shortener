@@ -15,7 +15,7 @@ import (
 )
 
 func TestURLHandler_ServeHTTP(t *testing.T) {
-	config := config.GetConfig()
+	config := config.GetServerConfig()
 	storage := storage.NewURLStorage()
 	shortener := app.NewURLShortener(&storage)
 	handler := NewURLHandler(&shortener, &config)
