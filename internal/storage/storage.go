@@ -49,7 +49,7 @@ func (s URLStorage) GetData(id int) (url string, err error) {
 }
 
 func (s *URLStorage) LoadData() {
-	file, err := os.Open(s.config.StoragePath + "/data.txt")
+	file, err := os.Open(s.config.StoragePath)
 	if err != nil {
 		log.Println(err.Error())
 		return
@@ -81,7 +81,7 @@ func (s URLStorage) saveData(id int, url string) {
 			return
 		}
 	}
-	file, err := os.OpenFile(s.config.StoragePath+"/data.txt", os.O_CREATE|os.O_APPEND|os.O_WRONLY, os.ModePerm)
+	file, err := os.OpenFile(s.config.StoragePath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, os.ModePerm)
 	if err != nil {
 		log.Println(err.Error())
 		return

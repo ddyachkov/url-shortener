@@ -12,7 +12,7 @@ type ServerConfig struct {
 }
 
 type StorageConfig struct {
-	StoragePath string `env:"FILE_STORAGE_PATH" envDefault:"./data"`
+	StoragePath string `env:"FILE_STORAGE_PATH" envDefault:"./data/data.txt"`
 }
 
 func GetServerConfig() ServerConfig {
