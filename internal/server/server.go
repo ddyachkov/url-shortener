@@ -37,7 +37,6 @@ func Run() {
 
 	<-quit
 
-	storage.SaveData()
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	if err := server.Shutdown(ctx); err != nil {

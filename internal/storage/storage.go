@@ -35,6 +35,7 @@ func (s *URLStorage) WriteData(url string) (id int, err error) {
 	id = s.lastID
 	s.urls[id] = url
 	s.ids[url] = id
+	s.saveData(id, url)
 
 	return id, nil
 }
@@ -72,7 +73,7 @@ func (s *URLStorage) LoadData() {
 	s.lastID = id
 }
 
-func (s URLStorage) SaveData() {
+func (s URLStorage) saveData(id int, url string) {
 	if _, err := os.Stat(s.config.StoragePath); os.IsNotExist(err) {
 		err := os.Mkdir(s.config.StoragePath, os.ModePerm)
 		if err != nil {
@@ -80,14 +81,11 @@ func (s URLStorage) SaveData() {
 			return
 		}
 	}
-	file, err := os.OpenFile(s.config.StoragePath+"/data.txt", os.O_CREATE|os.O_RDWR|os.O_TRUNC, os.ModePerm)
+	file, err := os.OpenFile(s.config.StoragePath+"/data.txt", os.O_CREATE|os.O_APPEND|os.O_WRONLY, os.ModePerm)
 	if err != nil {
 		log.Println(err.Error())
 		return
 	}
 	defer file.Close()
-
-	for id, url := range s.urls {
-		fmt.Fprintf(file, "%d %s\n", id, url)
-	}
+	fmt.Fprintf(file, "%d %s\n", id, url)
 }
