@@ -9,6 +9,7 @@ import (
 	"github.com/ddyachkov/url-shortener/internal/app"
 	"github.com/ddyachkov/url-shortener/internal/config"
 	"github.com/go-chi/chi"
+	"github.com/go-chi/chi/middleware"
 )
 
 type handler struct {
@@ -22,6 +23,7 @@ func NewURLHandler(shortener *app.URLShortener) http.Handler {
 		service: shortener,
 	}
 
+	router.Use(middleware.Compress(5))
 	router.Post("/", h.ReturnTextShortURL)
 	router.Post("/api/shorten", h.ReturnJSONShortURL)
 
