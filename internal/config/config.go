@@ -26,10 +26,6 @@ func init() {
 	}
 
 	flag.StringVar(&ServerAddress, "a", cfg.ServerAddress, "help message for flagname")
-	log.Println("ServerAddress:", ServerAddress)
 	flag.StringVar(&BaseURL, "b", cfg.BaseURL, "help message for flagname")
-	log.Println("BaseURL:", BaseURL)
 	flag.StringVar(&FileStoragePath, "f", cfg.FileStoragePath, "help message for flagname")
-	log.Println("FileStoragePath:", FileStoragePath)
-
 }
