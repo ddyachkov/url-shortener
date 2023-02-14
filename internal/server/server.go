@@ -10,7 +10,7 @@ import (
 
 	"github.com/ddyachkov/url-shortener/internal/app"
 	"github.com/ddyachkov/url-shortener/internal/config"
-	handler "github.com/ddyachkov/url-shortener/internal/handlers"
+	"github.com/ddyachkov/url-shortener/internal/handler"
 	"github.com/ddyachkov/url-shortener/internal/storage"
 )
 

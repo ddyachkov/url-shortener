@@ -54,7 +54,6 @@ func (s *URLStorage) LoadData() {
 			log.Println(err.Error())
 			return
 		}
-		log.Println("Created", filepath.Dir(config.FileStoragePath), "directory")
 	}
 
 	file, err := os.Open(config.FileStoragePath)
