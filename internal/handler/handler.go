@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"compress/gzip"
 	"encoding/json"
 	"io"
 	"log"
@@ -9,8 +8,9 @@ import (
 
 	"github.com/ddyachkov/url-shortener/internal/app"
 	"github.com/ddyachkov/url-shortener/internal/config"
+	"github.com/ddyachkov/url-shortener/internal/middleware"
 	"github.com/go-chi/chi"
-	"github.com/go-chi/chi/middleware"
+	chiMiddleware "github.com/go-chi/chi/middleware"
 )
 
 type handler struct {
@@ -24,7 +24,9 @@ func NewURLHandler(shortener *app.URLShortener) http.Handler {
 		service: shortener,
 	}
 
-	router.Use(middleware.Compress(5))
+	router.Use(middleware.Decompress)
+	router.Use(chiMiddleware.Compress(5))
+
 	router.Post("/", h.ReturnTextShortURL)
 	router.Post("/api/shorten", h.ReturnJSONShortURL)
 
@@ -34,7 +36,7 @@ func NewURLHandler(shortener *app.URLShortener) http.Handler {
 }
 
 func (h handler) ReturnTextShortURL(w http.ResponseWriter, r *http.Request) {
-	body, err := returnRequestBody(r)
+	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -51,7 +53,7 @@ func (h handler) ReturnTextShortURL(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h handler) ReturnJSONShortURL(w http.ResponseWriter, r *http.Request) {
-	body, err := returnRequestBody(r)
+	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -95,27 +97,6 @@ func (h handler) RedirectToFullURL(w http.ResponseWriter, r *http.Request) {
 
 	log.Println("RedirectToFullURL:", config.BaseURL+"/"+uri, "->", url)
 	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
-}
-
-func returnRequestBody(r *http.Request) (body []byte, err error) {
-	var reader io.Reader
-
-	if r.Header.Get(`Content-Encoding`) == `gzip` {
-		gz, err := gzip.NewReader(r.Body)
-		if err != nil {
-			return nil, err
-		}
-		reader = gz
-		defer gz.Close()
-	} else {
-		reader = r.Body
-	}
-
-	body, err = io.ReadAll(reader)
-	if err != nil {
-		return nil, err
-	}
-	return body, nil
 }
 
 func writeResponse(w http.ResponseWriter, text []byte, code int) {
