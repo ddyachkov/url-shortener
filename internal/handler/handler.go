@@ -10,7 +10,6 @@ import (
 	"github.com/ddyachkov/url-shortener/internal/config"
 	"github.com/ddyachkov/url-shortener/internal/middleware"
 	"github.com/go-chi/chi"
-	chiMiddleware "github.com/go-chi/chi/middleware"
 )
 
 type handler struct {
@@ -25,7 +24,7 @@ func NewURLHandler(shortener *app.URLShortener) http.Handler {
 	}
 
 	router.Use(middleware.Decompress)
-	router.Use(chiMiddleware.Compress(5))
+	router.Use(middleware.Compress)
 
 	router.Post("/", h.ReturnTextShortURL)
 	router.Post("/api/shorten", h.ReturnJSONShortURL)
