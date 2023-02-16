@@ -55,8 +55,7 @@ func Test_makeID(t *testing.T) {
 }
 
 func TestURLShortener_ReturnURI(t *testing.T) {
-	cfg := config.NewServerConfig()
-	storage := storage.NewURLStorage(&cfg)
+	storage := storage.NewURLStorage()
 	shortener := NewURLShortener(&storage)
 	type args struct {
 		url string
@@ -99,8 +98,96 @@ func TestURLShortener_ReturnURI(t *testing.T) {
 }
 
 func TestURLShortener_GetFullURL(t *testing.T) {
+	storage := storage.NewURLStorage()
+	shortener := NewURLShortener(&storage)
+	url := "https://www.google.ru"
+	gotURI, err := shortener.ReturnURI(url)
+	if err != nil {
+		t.Fatal(err)
+	}
+	type args struct {
+		uri string
+	}
+	tests := []struct {
+		name    string
+		args    args
+		wantURL string
+		wantErr bool
+	}{
+		{
+			name:    "Positive_URLFound",
+			args:    args{uri: gotURI},
+			wantURL: url,
+			wantErr: false,
+		},
+		{
+			name:    "Negative_URLNotFound",
+			args:    args{uri: "a"},
+			wantURL: "",
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gotURL, err := shortener.GetFullURL(tt.args.uri)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("URLShortener.GetFullURL() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			assert.Equal(t, gotURL, tt.wantURL)
+		})
+	}
+}
+
+func TestURLShortener_ReturnURI_WithFileStorage(t *testing.T) {
 	cfg := config.NewServerConfig()
-	storage := storage.NewURLStorage(&cfg)
+	storage := storage.NewURLFileStorage(&cfg)
+	storage.LoadData()
+	shortener := NewURLShortener(&storage)
+	type args struct {
+		url string
+	}
+	tests := []struct {
+		name    string
+		args    args
+		wantURI string
+		wantErr bool
+	}{
+		{
+			name:    "Positive_NewURL",
+			args:    args{url: "https://www.google.ru"},
+			wantURI: "b",
+			wantErr: false,
+		},
+		{
+			name:    "Positive_SameURL",
+			args:    args{url: "https://www.google.ru"},
+			wantURI: "b",
+			wantErr: false,
+		},
+		{
+			name:    "Negative_InvalidURL",
+			args:    args{url: "www.google.ru"},
+			wantURI: "",
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gotURI, err := shortener.ReturnURI(tt.args.url)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("URLShortener.ReturnURI() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			assert.Equal(t, gotURI, tt.wantURI)
+		})
+	}
+}
+
+func TestURLShortener_GetFullURL_WithFileStorage(t *testing.T) {
+	cfg := config.NewServerConfig()
+	storage := storage.NewURLFileStorage(&cfg)
+	storage.LoadData()
 	shortener := NewURLShortener(&storage)
 	url := "https://www.google.ru"
 	gotURI, err := shortener.ReturnURI(url)
