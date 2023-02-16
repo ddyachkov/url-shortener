@@ -8,23 +8,31 @@ import (
 )
 
 var (
-	ServerAddress   string
-	BaseURL         string
-	FileStoragePath string
+	serverAddress   string
+	baseURL         string
+	fileStoragePath string
 )
 
-func init() {
-	cfg := struct {
-		ServerAddress   string `env:"SERVER_ADDRESS" envDefault:"localhost:8080"`
-		BaseURL         string `env:"BASE_URL" envDefault:"http://localhost:8080"`
-		FileStoragePath string `env:"FILE_STORAGE_PATH" envDefault:"./data/data.txt"`
-	}{}
+type ServerConfig struct {
+	ServerAddress   string `env:"SERVER_ADDRESS"`
+	BaseURL         string `env:"BASE_URL"`
+	FileStoragePath string `env:"FILE_STORAGE_PATH"`
+}
 
+func NewServerConfig() ServerConfig {
+	cfg := ServerConfig{
+		ServerAddress:   serverAddress,
+		BaseURL:         baseURL,
+		FileStoragePath: fileStoragePath,
+	}
 	if err := env.Parse(&cfg); err != nil {
 		log.Fatal(err)
 	}
+	return cfg
+}
 
-	flag.StringVar(&ServerAddress, "a", cfg.ServerAddress, "help message for flagname")
-	flag.StringVar(&BaseURL, "b", cfg.BaseURL, "help message for flagname")
-	flag.StringVar(&FileStoragePath, "f", cfg.FileStoragePath, "help message for flagname")
+func init() {
+	flag.StringVar(&serverAddress, "a", "localhost:8080", "help message for flagname")
+	flag.StringVar(&baseURL, "b", "http://localhost:8080", "help message for flagname")
+	flag.StringVar(&fileStoragePath, "f", "./data/data.txt", "help message for flagname")
 }

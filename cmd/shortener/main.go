@@ -17,19 +17,20 @@ import (
 
 func main() {
 	flag.Parse()
-	log.Println("ServerAddress:", config.ServerAddress)
-	log.Println("BaseURL:", config.BaseURL)
-	log.Println("FileStoragePath:", config.FileStoragePath)
+	cfg := config.NewServerConfig()
+	log.Println("ServerAddress:", cfg.ServerAddress)
+	log.Println("BaseURL:", cfg.BaseURL)
+	log.Println("FileStoragePath:", cfg.FileStoragePath)
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, os.Interrupt)
 
-	storage := storage.NewURLStorage()
+	storage := storage.NewURLStorage(&cfg)
 	storage.LoadData()
 
 	service := app.NewURLShortener(&storage)
 	server := http.Server{
-		Addr:    config.ServerAddress,
-		Handler: handler.NewURLHandler(&service),
+		Addr:    cfg.ServerAddress,
+		Handler: handler.NewURLHandler(&service, &cfg),
 	}
 
 	go func() {

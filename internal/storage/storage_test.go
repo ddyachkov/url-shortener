@@ -3,11 +3,13 @@ package storage
 import (
 	"testing"
 
+	"github.com/ddyachkov/url-shortener/internal/config"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestURLStorage_WriteData(t *testing.T) {
-	storage := NewURLStorage()
+	cfg := config.NewServerConfig()
+	storage := NewURLStorage(&cfg)
 	type args struct {
 		url string
 	}
@@ -43,7 +45,8 @@ func TestURLStorage_WriteData(t *testing.T) {
 }
 
 func TestURLStorage_GetData(t *testing.T) {
-	storage := NewURLStorage()
+	cfg := config.NewServerConfig()
+	storage := NewURLStorage(&cfg)
 	url := "https://www.google.ru"
 	gotID, err := storage.WriteData(url)
 	if err != nil {

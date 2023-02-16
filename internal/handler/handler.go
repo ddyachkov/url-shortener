@@ -14,13 +14,15 @@ import (
 
 type handler struct {
 	service *app.URLShortener
+	config  *config.ServerConfig
 }
 
-func NewURLHandler(shortener *app.URLShortener) http.Handler {
+func NewURLHandler(shortener *app.URLShortener, cfg *config.ServerConfig) http.Handler {
 	router := chi.NewRouter()
 
 	h := handler{
 		service: shortener,
+		config:  cfg,
 	}
 
 	router.Use(middleware.Decompress)
@@ -47,8 +49,8 @@ func (h handler) ReturnTextShortURL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Println("ReturnTextShortURL:", string(body), "->", config.BaseURL+"/"+uri)
-	writeResponse(w, []byte(config.BaseURL+"/"+uri), http.StatusCreated)
+	log.Println("ReturnTextShortURL:", string(body), "->", h.config.BaseURL+"/"+uri)
+	writeResponse(w, []byte(h.config.BaseURL+"/"+uri), http.StatusCreated)
 }
 
 func (h handler) ReturnJSONShortURL(w http.ResponseWriter, r *http.Request) {
@@ -74,14 +76,14 @@ func (h handler) ReturnJSONShortURL(w http.ResponseWriter, r *http.Request) {
 
 	responceBody := struct {
 		Result string `json:"result"`
-	}{Result: config.BaseURL + "/" + uri}
+	}{Result: h.config.BaseURL + "/" + uri}
 	responce, err := json.Marshal(responceBody)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	log.Println("ReturnJSONShortURL:", requestBody.URL, "->", config.BaseURL+"/"+uri)
+	log.Println("ReturnJSONShortURL:", requestBody.URL, "->", h.config.BaseURL+"/"+uri)
 	w.Header().Set("Content-Type", "application/json")
 	writeResponse(w, responce, http.StatusCreated)
 }
@@ -94,7 +96,7 @@ func (h handler) RedirectToFullURL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Println("RedirectToFullURL:", config.BaseURL+"/"+uri, "->", url)
+	log.Println("RedirectToFullURL:", h.config.BaseURL+"/"+uri, "->", url)
 	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
 }
 

@@ -15,9 +15,10 @@ import (
 )
 
 func TestURLHandler_ServeHTTP(t *testing.T) {
-	storage := storage.NewURLStorage()
+	cfg := config.NewServerConfig()
+	storage := storage.NewURLStorage(&cfg)
 	shortener := app.NewURLShortener(&storage)
-	handler := NewURLHandler(&shortener)
+	handler := NewURLHandler(&shortener, &cfg)
 	type header struct {
 		contentType string
 		location    string
@@ -42,7 +43,7 @@ func TestURLHandler_ServeHTTP(t *testing.T) {
 			body:   "https://www.google.ru",
 			want: want{
 				code: http.StatusCreated,
-				text: config.BaseURL + "/b",
+				text: cfg.BaseURL + "/b",
 			},
 		},
 		{
@@ -65,7 +66,7 @@ func TestURLHandler_ServeHTTP(t *testing.T) {
 			body:   "{\"URL\":\"https://www.google.ru\"}",
 			want: want{
 				code: http.StatusCreated,
-				text: "{\"result\":\"" + config.BaseURL + "/b\"}",
+				text: "{\"result\":\"" + cfg.BaseURL + "/b\"}",
 				header: header{
 					contentType: "application/json",
 				},

@@ -3,6 +3,7 @@ package app
 import (
 	"testing"
 
+	"github.com/ddyachkov/url-shortener/internal/config"
 	"github.com/ddyachkov/url-shortener/internal/storage"
 	"github.com/stretchr/testify/assert"
 )
@@ -54,7 +55,8 @@ func Test_makeID(t *testing.T) {
 }
 
 func TestURLShortener_ReturnURI(t *testing.T) {
-	storage := storage.NewURLStorage()
+	cfg := config.NewServerConfig()
+	storage := storage.NewURLStorage(&cfg)
 	shortener := NewURLShortener(&storage)
 	type args struct {
 		url string
@@ -97,7 +99,8 @@ func TestURLShortener_ReturnURI(t *testing.T) {
 }
 
 func TestURLShortener_GetFullURL(t *testing.T) {
-	storage := storage.NewURLStorage()
+	cfg := config.NewServerConfig()
+	storage := storage.NewURLStorage(&cfg)
 	shortener := NewURLShortener(&storage)
 	url := "https://www.google.ru"
 	gotURI, err := shortener.ReturnURI(url)
