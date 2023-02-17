@@ -1,6 +1,6 @@
 package app
 
-import netUrl "net/url"
+import "net/url"
 
 type Storage interface {
 	WriteData(string) (int, error)
@@ -19,12 +19,12 @@ func NewURLShortener(st Storage) URLShortener {
 }
 
 // ReturnURI returns URI for received URL. If URL is invalid then returns error.
-func (shortener *URLShortener) ReturnURI(url string) (uri string, err error) {
-	_, err = netUrl.ParseRequestURI(url)
+func (shortener *URLShortener) ReturnURI(fullURL string) (uri string, err error) {
+	_, err = url.ParseRequestURI(fullURL)
 	if err != nil {
 		return "", err
 	}
-	id, err := shortener.storage.WriteData(url)
+	id, err := shortener.storage.WriteData(fullURL)
 	if err != nil {
 		return "", err
 	}
@@ -32,13 +32,13 @@ func (shortener *URLShortener) ReturnURI(url string) (uri string, err error) {
 }
 
 // GetFullURL returns full URL for received URI. IF URL is not found then returns error.
-func (shortener *URLShortener) GetFullURL(uri string) (url string, err error) {
+func (shortener *URLShortener) GetFullURL(uri string) (fullURL string, err error) {
 	id := makeID(uri)
-	url, err = shortener.storage.GetData(id)
+	fullURL, err = shortener.storage.GetData(id)
 	if err != nil {
 		return "", err
 	}
-	return url, nil
+	return fullURL, nil
 }
 
 // makeURI returns URI from data ID

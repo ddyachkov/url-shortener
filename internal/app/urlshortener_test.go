@@ -1,12 +1,30 @@
 package app
 
 import (
+	"fmt"
+	"os"
 	"testing"
 
 	"github.com/ddyachkov/url-shortener/internal/config"
 	"github.com/ddyachkov/url-shortener/internal/storage"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
+
+var cfg config.ServerConfig = config.ServerConfig{FileStoragePath: "/tmp/data.txt"}
+
+func createFile(t *testing.T, fileStoragePath string, content string) {
+	file, err := os.Create(fileStoragePath)
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		_ = os.Remove(file.Name())
+	})
+	t.Cleanup(func() {
+		_ = file.Close()
+	})
+	_, err = file.Write([]byte(content))
+	require.NoError(t, err)
+}
 
 func Test_makeURI(t *testing.T) {
 	type args struct {
@@ -139,61 +157,14 @@ func TestURLShortener_GetFullURL(t *testing.T) {
 	}
 }
 
-func TestURLShortener_ReturnURI_WithFileStorage(t *testing.T) {
-	cfg := config.NewServerConfig()
-	storage := storage.NewURLFileStorage(&cfg)
-	storage.LoadData()
-	shortener := NewURLShortener(&storage)
-	type args struct {
-		url string
-	}
-	tests := []struct {
-		name    string
-		args    args
-		wantURI string
-		wantErr bool
-	}{
-		{
-			name:    "Positive_NewURL",
-			args:    args{url: "https://www.google.ru"},
-			wantURI: "b",
-			wantErr: false,
-		},
-		{
-			name:    "Positive_SameURL",
-			args:    args{url: "https://www.google.ru"},
-			wantURI: "b",
-			wantErr: false,
-		},
-		{
-			name:    "Negative_InvalidURL",
-			args:    args{url: "www.google.ru"},
-			wantURI: "",
-			wantErr: true,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			gotURI, err := shortener.ReturnURI(tt.args.url)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("URLShortener.ReturnURI() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			assert.Equal(t, gotURI, tt.wantURI)
-		})
-	}
-}
-
 func TestURLShortener_GetFullURL_WithFileStorage(t *testing.T) {
-	cfg := config.NewServerConfig()
+	url := "https://www.google.ru"
+	id := 1
+	createFile(t, cfg.FileStoragePath, fmt.Sprint(id, " ", url))
 	storage := storage.NewURLFileStorage(&cfg)
 	storage.LoadData()
 	shortener := NewURLShortener(&storage)
-	url := "https://www.google.ru"
-	gotURI, err := shortener.ReturnURI(url)
-	if err != nil {
-		t.Fatal(err)
-	}
+
 	type args struct {
 		uri string
 	}
@@ -205,7 +176,7 @@ func TestURLShortener_GetFullURL_WithFileStorage(t *testing.T) {
 	}{
 		{
 			name:    "Positive_URLFound",
-			args:    args{uri: gotURI},
+			args:    args{uri: makeURI(id)},
 			wantURL: url,
 			wantErr: false,
 		},
