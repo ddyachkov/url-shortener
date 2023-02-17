@@ -18,9 +18,7 @@ import (
 func main() {
 	flag.Parse()
 	cfg := config.NewServerConfig()
-	log.Println("ServerAddress:", cfg.ServerAddress)
-	log.Println("BaseURL:", cfg.BaseURL)
-	log.Println("FileStoragePath:", cfg.FileStoragePath)
+	log.Printf("config: %+v\n", cfg)
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, os.Interrupt)
 
@@ -34,7 +32,7 @@ func main() {
 	}
 
 	go func() {
-		log.Println("Server starting...")
+		log.Println("server starting...")
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatal(err)
 		}
@@ -47,5 +45,5 @@ func main() {
 	if err := server.Shutdown(ctx); err != nil {
 		log.Fatal(err)
 	}
-	log.Println("Server stopped")
+	log.Println("server stopped")
 }

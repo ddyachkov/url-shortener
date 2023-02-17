@@ -5,6 +5,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"net/url"
 
 	"github.com/ddyachkov/url-shortener/internal/app"
 	"github.com/ddyachkov/url-shortener/internal/config"
@@ -49,8 +50,13 @@ func (h handler) ReturnTextShortURL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Println("ReturnTextShortURL:", string(body), "->", h.config.BaseURL+"/"+uri)
-	writeResponse(w, []byte(h.config.BaseURL+"/"+uri), http.StatusCreated)
+	shortURL, err := url.JoinPath(h.config.BaseURL, uri)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	log.Println("ReturnTextShortURL:", string(body), "->", shortURL)
+	writeResponse(w, []byte(shortURL), http.StatusCreated)
 }
 
 func (h handler) ReturnJSONShortURL(w http.ResponseWriter, r *http.Request) {
@@ -74,30 +80,42 @@ func (h handler) ReturnJSONShortURL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	shortURL, err := url.JoinPath(h.config.BaseURL, uri)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	responceBody := struct {
 		Result string `json:"result"`
-	}{Result: h.config.BaseURL + "/" + uri}
+	}{Result: shortURL}
 	responce, err := json.Marshal(responceBody)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	log.Println("ReturnJSONShortURL:", requestBody.URL, "->", h.config.BaseURL+"/"+uri)
+	log.Println("ReturnJSONShortURL:", requestBody.URL, "->", shortURL)
 	w.Header().Set("Content-Type", "application/json")
 	writeResponse(w, responce, http.StatusCreated)
 }
 
 func (h handler) RedirectToFullURL(w http.ResponseWriter, r *http.Request) {
 	uri := chi.URLParam(r, "URI")
-	url, err := h.service.GetFullURL(uri)
+	fullURL, err := h.service.GetFullURL(uri)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}
 
-	log.Println("RedirectToFullURL:", h.config.BaseURL+"/"+uri, "->", url)
-	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
+	shortURL, err := url.JoinPath(h.config.BaseURL, uri)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	log.Println("RedirectToFullURL:", shortURL, "->", fullURL)
+	http.Redirect(w, r, fullURL, http.StatusTemporaryRedirect)
 }
 
 func writeResponse(w http.ResponseWriter, text []byte, code int) {
