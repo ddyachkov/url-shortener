@@ -1,14 +1,15 @@
 package storage
 
-import "errors"
+import (
+	"errors"
+)
 
 type URLStorage struct {
-	urls   map[int]string // url storage
-	ids    map[string]int // id storage
-	lastID int            // last used ID
+	urls   map[int]string
+	ids    map[string]int
+	lastID int
 }
 
-// NewURLStorage() returns a new URLStorage object that implements the Storage interface.
 func NewURLStorage() URLStorage {
 	return URLStorage{
 		urls:   make(map[int]string),
@@ -17,23 +18,21 @@ func NewURLStorage() URLStorage {
 	}
 }
 
-// WriteData writes data into storage and returns a new ID. If data is already in storage, then return its ID.
-func (storage *URLStorage) WriteData(url string) (id int, err error) {
-	id, ok := storage.ids[url]
+func (s *URLStorage) WriteData(url string) (id int, err error) {
+	id, ok := s.ids[url]
 	if ok {
 		return id, nil
 	}
-	storage.lastID += 1
-	id = storage.lastID
-	storage.urls[id] = url
-	storage.ids[url] = id
+	s.lastID += 1
+	id = s.lastID
+	s.urls[id] = url
+	s.ids[url] = id
 
 	return id, nil
 }
 
-// GetData returns data from storage. If data is not found then returns error.
-func (storage URLStorage) GetData(id int) (url string, err error) {
-	url, ok := storage.urls[id]
+func (s URLStorage) GetData(id int) (url string, err error) {
+	url, ok := s.urls[id]
 	if !ok {
 		return "", errors.New("URL not found")
 	}

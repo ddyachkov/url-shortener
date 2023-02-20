@@ -1,11 +1,30 @@
 package app
 
 import (
+	"fmt"
+	"os"
 	"testing"
 
+	"github.com/ddyachkov/url-shortener/internal/config"
 	"github.com/ddyachkov/url-shortener/internal/storage"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
+
+var cfg config.ServerConfig = config.ServerConfig{FileStoragePath: "/tmp/data.txt"}
+
+func createFile(t *testing.T, fileStoragePath string, content string) {
+	file, err := os.Create(fileStoragePath)
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		_ = os.Remove(file.Name())
+	})
+	t.Cleanup(func() {
+		_ = file.Close()
+	})
+	_, err = file.Write([]byte(content))
+	require.NoError(t, err)
+}
 
 func Test_makeURI(t *testing.T) {
 	type args struct {
@@ -116,6 +135,48 @@ func TestURLShortener_GetFullURL(t *testing.T) {
 		{
 			name:    "Positive_URLFound",
 			args:    args{uri: gotURI},
+			wantURL: url,
+			wantErr: false,
+		},
+		{
+			name:    "Negative_URLNotFound",
+			args:    args{uri: "a"},
+			wantURL: "",
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gotURL, err := shortener.GetFullURL(tt.args.uri)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("URLShortener.GetFullURL() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			assert.Equal(t, gotURL, tt.wantURL)
+		})
+	}
+}
+
+func TestURLShortener_GetFullURL_WithFileStorage(t *testing.T) {
+	url := "https://www.google.ru"
+	id := 1
+	createFile(t, cfg.FileStoragePath, fmt.Sprint(id, " ", url))
+	storage := storage.NewURLFileStorage(&cfg)
+	storage.LoadData()
+	shortener := NewURLShortener(&storage)
+
+	type args struct {
+		uri string
+	}
+	tests := []struct {
+		name    string
+		args    args
+		wantURL string
+		wantErr bool
+	}{
+		{
+			name:    "Positive_URLFound",
+			args:    args{uri: makeURI(id)},
 			wantURL: url,
 			wantErr: false,
 		},
