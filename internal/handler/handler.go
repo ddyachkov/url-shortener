@@ -142,6 +142,7 @@ func (h handler) ReturnJSONShortURL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	w.Header().Set("Content-Type", "application/json")
 	log.Println("ReturnJSONShortURL:", requestBody.URL, "->", shortURL)
 	writeResponse(w, responce, http.StatusCreated)
 }
@@ -169,8 +170,6 @@ func (h handler) GetUserURL(w http.ResponseWriter, r *http.Request) {
 		ShortURL    string `json:"short_url"`
 		OriginalURL string `json:"original_url"`
 	}
-
-	w.Header().Set("Content-Type", "application/json")
 
 	cookieValue, err := cookie.GetEncryptedValue(r, "user_id", []byte(h.config.SecretKey))
 	if err != nil {
