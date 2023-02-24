@@ -1,10 +1,14 @@
 package app
 
-import "net/url"
+import (
+	"net/url"
+)
 
 type Storage interface {
-	WriteData(string) (int, error)
+	WriteData(string, int) (int, error)
 	GetData(int) (string, error)
+	MakeNewUser() (int, error)
+	GetUserData(int) ([]int, error)
 }
 
 type URLShortener struct {
@@ -19,12 +23,12 @@ func NewURLShortener(st Storage) URLShortener {
 }
 
 // ReturnURI returns URI for received URL. If URL is invalid then returns error.
-func (shortener *URLShortener) ReturnURI(fullURL string) (uri string, err error) {
+func (sh *URLShortener) ReturnURI(fullURL string, userID int) (uri string, err error) {
 	_, err = url.ParseRequestURI(fullURL)
 	if err != nil {
 		return "", err
 	}
-	id, err := shortener.storage.WriteData(fullURL)
+	id, err := sh.storage.WriteData(fullURL, userID)
 	if err != nil {
 		return "", err
 	}
@@ -32,13 +36,40 @@ func (shortener *URLShortener) ReturnURI(fullURL string) (uri string, err error)
 }
 
 // GetFullURL returns full URL for received URI. IF URL is not found then returns error.
-func (shortener *URLShortener) GetFullURL(uri string) (fullURL string, err error) {
+func (sh *URLShortener) GetFullURL(uri string) (fullURL string, err error) {
 	id := makeID(uri)
-	fullURL, err = shortener.storage.GetData(id)
+	fullURL, err = sh.storage.GetData(id)
 	if err != nil {
 		return "", err
 	}
 	return fullURL, nil
+}
+
+func (sh URLShortener) GetNewUser() (userID int, err error) {
+	userID, err = sh.storage.MakeNewUser()
+	if err != nil {
+		return 0, err
+	}
+	return userID, nil
+}
+
+func (sh URLShortener) GetURLByUser(userID int) (urls map[string]string, err error) {
+	urls = make(map[string]string)
+	dataIDs, err := sh.storage.GetUserData(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, dataID := range dataIDs {
+		uri := makeURI(dataID)
+		url, err := sh.storage.GetData(dataID)
+		if err != nil {
+			return nil, err
+		}
+		urls[uri] = url
+	}
+
+	return urls, nil
 }
 
 // makeURI returns URI from data ID

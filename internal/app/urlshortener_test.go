@@ -105,7 +105,7 @@ func TestURLShortener_ReturnURI(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotURI, err := shortener.ReturnURI(tt.args.url)
+			gotURI, err := shortener.ReturnURI(tt.args.url, 1)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("URLShortener.ReturnURI() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -119,7 +119,7 @@ func TestURLShortener_GetFullURL(t *testing.T) {
 	storage := storage.NewURLStorage()
 	shortener := NewURLShortener(&storage)
 	url := "https://www.google.ru"
-	gotURI, err := shortener.ReturnURI(url)
+	gotURI, err := shortener.ReturnURI(url, 1)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -12,41 +12,55 @@ import (
 )
 
 type URLFileStorage struct {
-	urls   map[int]string
-	ids    map[string]int
-	lastID int
-	config *config.ServerConfig
+	config     *config.ServerConfig
+	urls       map[int]string
+	ids        map[string]int
+	users      map[int][]int
+	lastDataID int
+	lastUserID int
 }
 
 func NewURLFileStorage(cfg *config.ServerConfig) URLFileStorage {
 	return URLFileStorage{
-		urls:   make(map[int]string),
-		ids:    make(map[string]int),
-		lastID: 0,
-		config: cfg,
+		config:     cfg,
+		urls:       make(map[int]string),
+		ids:        make(map[string]int),
+		users:      make(map[int][]int),
+		lastDataID: 0,
+		lastUserID: 0,
 	}
 }
 
-func (s *URLFileStorage) WriteData(url string) (id int, err error) {
-	id, ok := s.ids[url]
+func (s *URLFileStorage) WriteData(url string, userID int) (dataID int, err error) {
+	dataID, ok := s.ids[url]
 	if ok {
-		return id, nil
+		return dataID, nil
 	}
-	s.lastID += 1
-	id = s.lastID
-	s.urls[id] = url
-	s.ids[url] = id
-	s.saveData(id, url)
+	s.lastDataID += 1
+	dataID = s.lastDataID
+	s.urls[dataID] = url
+	s.ids[url] = dataID
+	s.users[userID] = append(s.users[userID], dataID)
+	s.saveData(dataID, url, userID)
 
-	return id, nil
+	return dataID, nil
 }
 
-func (s URLFileStorage) GetData(id int) (url string, err error) {
-	url, ok := s.urls[id]
+func (s URLFileStorage) GetData(dataID int) (url string, err error) {
+	url, ok := s.urls[dataID]
 	if !ok {
 		return "", errors.New("URL not found")
 	}
 	return url, nil
+}
+
+func (s *URLFileStorage) MakeNewUser() (userID int, err error) {
+	s.lastUserID += 1
+	return s.lastUserID, nil
+}
+
+func (s URLFileStorage) GetUserData(userID int) (dataIDs []int, err error) {
+	return s.users[userID], nil
 }
 
 func (s *URLFileStorage) LoadData() {
@@ -65,10 +79,11 @@ func (s *URLFileStorage) LoadData() {
 	}
 	defer file.Close()
 
-	var id int
+	var dataID int
 	var url string
+	var userID int
 	for {
-		_, err := fmt.Fscanf(file, "%d %s\n", &id, &url)
+		_, err := fmt.Fscanf(file, "%d %s %d\n", &dataID, &url, &userID)
 		if err != nil {
 			if err == io.EOF {
 				break
@@ -76,18 +91,24 @@ func (s *URLFileStorage) LoadData() {
 			log.Println(err.Error())
 			return
 		}
-		s.urls[id] = url
-		s.ids[url] = id
+		s.urls[dataID] = url
+		s.ids[url] = dataID
+		s.users[userID] = append(s.users[userID], dataID)
+		if dataID > s.lastDataID {
+			s.lastDataID = dataID
+		}
+		if userID > s.lastUserID {
+			s.lastUserID = userID
+		}
 	}
-	s.lastID = id
 }
 
-func (s URLFileStorage) saveData(id int, url string) {
+func (s URLFileStorage) saveData(dataID int, url string, userID int) {
 	file, err := os.OpenFile(s.config.FileStoragePath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, os.ModePerm)
 	if err != nil {
 		log.Println(err.Error())
 		return
 	}
 	defer file.Close()
-	fmt.Fprintf(file, "%d %s\n", id, url)
+	fmt.Fprintf(file, "%d %s %d\n", dataID, url, userID)
 }

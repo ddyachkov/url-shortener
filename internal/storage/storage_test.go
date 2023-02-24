@@ -32,7 +32,7 @@ func TestURLStorage_WriteData(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotID, err := storage.WriteData(tt.args.url)
+			gotID, err := storage.WriteData(tt.args.url, 1)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("URLStorage.GetData() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -45,7 +45,7 @@ func TestURLStorage_WriteData(t *testing.T) {
 func TestURLStorage_GetData(t *testing.T) {
 	storage := NewURLStorage()
 	url := "https://www.google.ru"
-	gotID, err := storage.WriteData(url)
+	gotID, err := storage.WriteData(url, 1)
 	if err != nil {
 		t.Fatal(err)
 	}

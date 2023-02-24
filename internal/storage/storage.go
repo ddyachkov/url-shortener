@@ -5,36 +5,50 @@ import (
 )
 
 type URLStorage struct {
-	urls   map[int]string
-	ids    map[string]int
-	lastID int
+	urls       map[int]string
+	ids        map[string]int
+	users      map[int][]int
+	lastDataID int
+	lastUserID int
 }
 
 func NewURLStorage() URLStorage {
 	return URLStorage{
-		urls:   make(map[int]string),
-		ids:    make(map[string]int),
-		lastID: 0,
+		urls:       make(map[int]string),
+		ids:        make(map[string]int),
+		users:      make(map[int][]int),
+		lastDataID: 0,
+		lastUserID: 0,
 	}
 }
 
-func (s *URLStorage) WriteData(url string) (id int, err error) {
-	id, ok := s.ids[url]
+func (s *URLStorage) WriteData(url string, userID int) (dataID int, err error) {
+	dataID, ok := s.ids[url]
 	if ok {
-		return id, nil
+		return dataID, nil
 	}
-	s.lastID += 1
-	id = s.lastID
-	s.urls[id] = url
-	s.ids[url] = id
+	s.lastDataID += 1
+	dataID = s.lastDataID
+	s.urls[dataID] = url
+	s.ids[url] = dataID
+	s.users[userID] = append(s.users[userID], dataID)
 
-	return id, nil
+	return dataID, nil
 }
 
-func (s URLStorage) GetData(id int) (url string, err error) {
-	url, ok := s.urls[id]
+func (s URLStorage) GetData(dataID int) (url string, err error) {
+	url, ok := s.urls[dataID]
 	if !ok {
 		return "", errors.New("URL not found")
 	}
 	return url, nil
+}
+
+func (s *URLStorage) MakeNewUser() (userID int, err error) {
+	s.lastUserID += 1
+	return s.lastUserID, nil
+}
+
+func (s URLStorage) GetUserData(userID int) (dataIDs []int, err error) {
+	return s.users[userID], nil
 }
