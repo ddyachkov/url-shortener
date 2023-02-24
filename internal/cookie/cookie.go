@@ -85,11 +85,9 @@ func WriteEncryptedValue(w http.ResponseWriter, name string, value string, secre
 	}
 
 	cookie := http.Cookie{
-		Name:     name,
-		Value:    value,
-		HttpOnly: true,
-		Secure:   true,
-		SameSite: http.SameSiteLaxMode,
+		Name:  name,
+		Value: value,
+		Path:  "/",
 	}
 
 	plainText := fmt.Sprintf("%s:%s", cookie.Name, cookie.Value)

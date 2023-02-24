@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"errors"
 	"io"
 	"log"
 	"net/http"
@@ -142,7 +143,6 @@ func (h handler) ReturnJSONShortURL(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Println("ReturnJSONShortURL:", requestBody.URL, "->", shortURL)
-	w.Header().Set("Content-Type", "application/json")
 	writeResponse(w, responce, http.StatusCreated)
 }
 
@@ -170,9 +170,16 @@ func (h handler) GetUserURL(w http.ResponseWriter, r *http.Request) {
 		OriginalURL string `json:"original_url"`
 	}
 
+	w.Header().Set("Content-Type", "application/json")
+
 	cookieValue, err := cookie.GetEncryptedValue(r, "user_id", []byte(h.config.SecretKey))
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		switch {
+		case errors.Is(err, http.ErrNoCookie):
+			http.Error(w, "[]", http.StatusNoContent)
+		default:
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
 		return
 	}
 
@@ -181,11 +188,13 @@ func (h handler) GetUserURL(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
 	urls, err := h.service.GetURLByUser(userID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
 	if len(urls) == 0 {
 		http.Error(w, "[]", http.StatusNoContent)
 		return
