@@ -1,14 +1,19 @@
 package storage
 
 import (
+	"os"
 	"testing"
 
 	"github.com/ddyachkov/url-shortener/internal/config"
 	"github.com/stretchr/testify/assert"
 )
 
+var cfg config.ServerConfig = config.ServerConfig{FileStoragePath: "/tmp/data.txt"}
+
 func TestURLFileStorage_WriteData(t *testing.T) {
-	cfg := config.NewServerConfig()
+	t.Cleanup(func() {
+		_ = os.Remove(cfg.FileStoragePath)
+	})
 	storage := NewURLFileStorage(&cfg)
 	type args struct {
 		url string
@@ -45,7 +50,9 @@ func TestURLFileStorage_WriteData(t *testing.T) {
 }
 
 func TestURLFileStorage_GetData(t *testing.T) {
-	cfg := config.NewServerConfig()
+	t.Cleanup(func() {
+		_ = os.Remove(cfg.FileStoragePath)
+	})
 	storage := NewURLFileStorage(&cfg)
 	url := "https://www.google.ru"
 	gotID, err := storage.WriteData(url, 1)

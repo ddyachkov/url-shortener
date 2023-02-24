@@ -15,7 +15,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var cfg config.ServerConfig = config.ServerConfig{ServerAddress: "localhost:8080", BaseURL: "http://localhost:8080", FileStoragePath: "/tmp/data.txt"}
+var cfg config.ServerConfig = config.ServerConfig{
+	ServerAddress:   "localhost:8080",
+	BaseURL:         "http://localhost:8080",
+	FileStoragePath: "/tmp/data.txt",
+	SecretKey:       "thisisthirtytwobytelongsecretkey",
+}
 
 func TestURLHandler_ServeHTTP(t *testing.T) {
 	storage := storage.NewURLStorage()

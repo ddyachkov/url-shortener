@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var cfg config.ServerConfig = config.ServerConfig{FileStoragePath: "/tmp/data.txt"}
+var cfg config.ServerConfig = config.ServerConfig{FileStoragePath: "/tmp/data.txt", SecretKey: "thisisthirtytwobytelongsecretkey"}
 
 func createFile(t *testing.T, fileStoragePath string, content string) {
 	file, err := os.Create(fileStoragePath)
@@ -159,8 +159,9 @@ func TestURLShortener_GetFullURL(t *testing.T) {
 
 func TestURLShortener_GetFullURL_WithFileStorage(t *testing.T) {
 	url := "https://www.google.ru"
-	id := 1
-	createFile(t, cfg.FileStoragePath, fmt.Sprint(id, " ", url))
+	dataID := 1
+	userID := 1
+	createFile(t, cfg.FileStoragePath, fmt.Sprint(dataID, " ", url, " ", userID))
 	storage := storage.NewURLFileStorage(&cfg)
 	storage.LoadData()
 	shortener := NewURLShortener(&storage)
@@ -176,7 +177,7 @@ func TestURLShortener_GetFullURL_WithFileStorage(t *testing.T) {
 	}{
 		{
 			name:    "Positive_URLFound",
-			args:    args{uri: makeURI(id)},
+			args:    args{uri: makeURI(dataID)},
 			wantURL: url,
 			wantErr: false,
 		},
