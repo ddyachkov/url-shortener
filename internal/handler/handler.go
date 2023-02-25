@@ -14,6 +14,7 @@ import (
 	"github.com/ddyachkov/url-shortener/internal/cookie"
 	"github.com/ddyachkov/url-shortener/internal/middleware"
 	"github.com/go-chi/chi"
+	"github.com/jackc/pgx"
 )
 
 type handler struct {
@@ -37,6 +38,7 @@ func NewURLHandler(shortener *app.URLShortener, cfg *config.ServerConfig) http.H
 
 	router.Get("/{URI}", h.RedirectToFullURL)
 	router.Get("/api/user/urls", h.GetUserURL)
+	router.Get("/ping", h.PingDatabase)
 
 	return router
 }
@@ -217,6 +219,24 @@ func (h handler) GetUserURL(w http.ResponseWriter, r *http.Request) {
 	log.Println("GetUserURL:", cookieValue)
 	w.Header().Set("Content-Type", "application/json")
 	writeResponse(w, responce, http.StatusOK)
+}
+
+func (h handler) PingDatabase(w http.ResponseWriter, r *http.Request) {
+	poolConfig, err := pgx.ParseDSN(h.config.DatabaseDsn)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	conn, err := pgx.Connect(poolConfig)
+	if err != nil {
+		log.Println(err.Error())
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer conn.Close()
+
+	writeResponse(w, []byte(""), http.StatusOK)
 }
 
 func writeResponse(w http.ResponseWriter, text []byte, code int) {

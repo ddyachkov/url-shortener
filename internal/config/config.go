@@ -10,6 +10,7 @@ import (
 var (
 	serverAddress   string
 	baseURL         string
+	databaseDsn     string
 	fileStoragePath string
 	secretKey       string
 )
@@ -17,6 +18,7 @@ var (
 type ServerConfig struct {
 	ServerAddress   string `env:"SERVER_ADDRESS"`
 	BaseURL         string `env:"BASE_URL"`
+	DatabaseDsn     string `env:"DATABASE_DSN"`
 	FileStoragePath string `env:"FILE_STORAGE_PATH"`
 	SecretKey       string `env:"SECRET_KEY"`
 }
@@ -25,6 +27,7 @@ func NewServerConfig() ServerConfig {
 	cfg := ServerConfig{
 		ServerAddress:   serverAddress,
 		BaseURL:         baseURL,
+		DatabaseDsn:     databaseDsn,
 		FileStoragePath: fileStoragePath,
 		SecretKey:       secretKey,
 	}
@@ -37,6 +40,7 @@ func NewServerConfig() ServerConfig {
 func init() {
 	flag.StringVar(&serverAddress, "a", "localhost:8080", "server address")
 	flag.StringVar(&baseURL, "b", "http://localhost:8080", "base URL")
+	flag.StringVar(&databaseDsn, "d", "user=shortener password=shortener host=localhost port=5432 dbname=shortener", "database data source name")
 	flag.StringVar(&fileStoragePath, "f", "./data/data.txt", "file storage path")
 	flag.StringVar(&secretKey, "k", "thisisthirtytwobytelongsecretkey", "secret key")
 }
