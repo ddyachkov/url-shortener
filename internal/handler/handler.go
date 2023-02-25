@@ -222,7 +222,7 @@ func (h handler) GetUserURL(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h handler) PingDatabase(w http.ResponseWriter, r *http.Request) {
-	poolConfig, err := pgx.ParseDSN(h.config.DatabaseDsn)
+	poolConfig, err := pgx.ParseConnectionString(h.config.DatabaseDsn)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
