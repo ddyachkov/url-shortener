@@ -30,7 +30,8 @@ func main() {
 	var dbpool *pgxpool.Pool
 	switch {
 	case cfg.DatabaseDsn != "":
-		dbpool, err := pgxpool.New(ctx, cfg.DatabaseDsn)
+		var err error
+		dbpool, err = pgxpool.New(ctx, cfg.DatabaseDsn)
 		if err != nil {
 			log.Fatal(err)
 		}

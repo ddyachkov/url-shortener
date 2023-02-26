@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"io"
@@ -281,7 +280,7 @@ func (h handler) PingDatabase(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := h.db.Ping(context.Background())
+	err := h.db.Ping(r.Context())
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
