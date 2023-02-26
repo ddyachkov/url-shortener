@@ -30,6 +30,23 @@ func (sh *URLShortener) ReturnURI(fullURL string, userID int) (uri string, err e
 	return makeURI(id), nil
 }
 
+func (sh *URLShortener) ReturnBatchURI(batchData []storage.URLData, userID int) (err error) {
+	for i := range batchData {
+		_, err = url.ParseRequestURI(batchData[i].OriginalURL)
+		if err != nil {
+			return err
+		}
+
+		batchData[i].ID, err = sh.storage.WriteData(batchData[i].OriginalURL, userID)
+		if err != nil {
+			return err
+		}
+		batchData[i].URI = makeURI(batchData[i].ID)
+	}
+
+	return nil
+}
+
 // GetFullURL returns full URL for received URI. IF URL is not found then returns error.
 func (sh *URLShortener) GetFullURL(uri string) (fullURL string, err error) {
 	id := makeID(uri)

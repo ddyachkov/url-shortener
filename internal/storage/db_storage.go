@@ -60,7 +60,7 @@ func (s URLDBStorage) GetUserURL(userID int) (urlData []URLData, err error) {
 
 	for rows.Next() {
 		var ud URLData
-		err = rows.Scan(&ud.ID, &ud.URL)
+		err = rows.Scan(&ud.ID, &ud.OriginalURL)
 		if err != nil {
 			return nil, err
 		}

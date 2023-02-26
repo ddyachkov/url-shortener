@@ -9,7 +9,9 @@ type URLStorage interface {
 }
 
 type URLData struct {
-	ID  int
-	URI string
-	URL string
+	ID          int    `json:"-"`
+	URI         string `json:"-"`
+	OriginalURL string `json:"original_url,omitempty"`
+	ShortURL    string `json:"short_url,omitempty"`
+	CorrID      string `json:"correlation_id,omitempty"`
 }

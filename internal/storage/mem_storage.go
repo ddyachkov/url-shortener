@@ -31,7 +31,7 @@ func (s *URLMemStorage) WriteData(url string, userID int) (dataID int, err error
 	dataID = s.lastDataID
 	s.urls[dataID] = url
 	s.ids[url] = dataID
-	s.users[userID] = append(s.users[userID], URLData{ID: dataID, URL: url})
+	s.users[userID] = append(s.users[userID], URLData{ID: dataID, OriginalURL: url})
 
 	return dataID, nil
 }

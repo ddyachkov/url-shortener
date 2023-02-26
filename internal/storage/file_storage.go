@@ -40,7 +40,7 @@ func (s *URLFileStorage) WriteData(url string, userID int) (dataID int, err erro
 	dataID = s.lastDataID
 	s.urls[dataID] = url
 	s.ids[url] = dataID
-	s.users[userID] = append(s.users[userID], URLData{ID: dataID, URL: url})
+	s.users[userID] = append(s.users[userID], URLData{ID: dataID, OriginalURL: url})
 	s.saveData(dataID, url, userID)
 
 	return dataID, nil
@@ -98,7 +98,7 @@ func (s *URLFileStorage) LoadData() {
 		}
 		s.urls[dataID] = url
 		s.ids[url] = dataID
-		s.users[userID] = append(s.users[userID], URLData{ID: dataID, URL: url})
+		s.users[userID] = append(s.users[userID], URLData{ID: dataID, OriginalURL: url})
 		if dataID > s.lastDataID {
 			s.lastDataID = dataID
 		}
