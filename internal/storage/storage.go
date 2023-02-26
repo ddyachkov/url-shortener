@@ -1,11 +1,13 @@
 package storage
 
+import "context"
+
 type URLStorage interface {
-	WriteData(string, int) (int, error)
-	GetData(int) (string, error)
-	CheckUser(int) (bool, error)
-	MakeNewUser() (int, error)
-	GetUserURL(int) ([]URLData, error)
+	WriteData(context.Context, string, int) (int, error)
+	GetData(context.Context, int) (string, error)
+	CheckUser(context.Context, int) (bool, error)
+	MakeNewUser(context.Context) (int, error)
+	GetUserURL(context.Context, int) ([]URLData, error)
 }
 
 type URLData struct {

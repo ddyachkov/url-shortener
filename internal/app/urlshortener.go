@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"net/url"
 
 	"github.com/ddyachkov/url-shortener/internal/storage"
@@ -18,26 +19,26 @@ func NewURLShortener(st storage.URLStorage) URLShortener {
 }
 
 // ReturnURI returns URI for received URL. If URL is invalid then returns error.
-func (sh *URLShortener) ReturnURI(fullURL string, userID int) (uri string, err error) {
+func (sh *URLShortener) ReturnURI(ctx context.Context, fullURL string, userID int) (uri string, err error) {
 	_, err = url.ParseRequestURI(fullURL)
 	if err != nil {
 		return "", err
 	}
-	id, err := sh.storage.WriteData(fullURL, userID)
-	if err != nil {
+	id, err := sh.storage.WriteData(ctx, fullURL, userID)
+	if id == 0 {
 		return "", err
 	}
-	return makeURI(id), nil
+	return makeURI(id), err
 }
 
-func (sh *URLShortener) ReturnBatchURI(batchData []storage.URLData, userID int) (err error) {
+func (sh *URLShortener) ReturnBatchURI(ctx context.Context, batchData []storage.URLData, userID int) (err error) {
 	for i := range batchData {
 		_, err = url.ParseRequestURI(batchData[i].OriginalURL)
 		if err != nil {
 			return err
 		}
 
-		batchData[i].ID, err = sh.storage.WriteData(batchData[i].OriginalURL, userID)
+		batchData[i].ID, err = sh.storage.WriteData(ctx, batchData[i].OriginalURL, userID)
 		if err != nil {
 			return err
 		}
@@ -48,17 +49,17 @@ func (sh *URLShortener) ReturnBatchURI(batchData []storage.URLData, userID int) 
 }
 
 // GetFullURL returns full URL for received URI. IF URL is not found then returns error.
-func (sh *URLShortener) GetFullURL(uri string) (fullURL string, err error) {
+func (sh *URLShortener) GetFullURL(ctx context.Context, uri string) (fullURL string, err error) {
 	id := makeID(uri)
-	fullURL, err = sh.storage.GetData(id)
+	fullURL, err = sh.storage.GetData(ctx, id)
 	if err != nil {
 		return "", err
 	}
 	return fullURL, nil
 }
 
-func (sh URLShortener) GetUser(userID *int) (new bool, err error) {
-	exists, err := sh.storage.CheckUser(*userID)
+func (sh URLShortener) GetUser(ctx context.Context, userID *int) (new bool, err error) {
+	exists, err := sh.storage.CheckUser(ctx, *userID)
 	if err != nil {
 		return false, err
 	}
@@ -67,7 +68,7 @@ func (sh URLShortener) GetUser(userID *int) (new bool, err error) {
 		return false, nil
 	}
 
-	*userID, err = sh.storage.MakeNewUser()
+	*userID, err = sh.storage.MakeNewUser(ctx)
 	if err != nil {
 		return false, err
 	}
@@ -75,8 +76,8 @@ func (sh URLShortener) GetUser(userID *int) (new bool, err error) {
 	return true, nil
 }
 
-func (sh URLShortener) GetURLByUser(userID int) (urlData []storage.URLData, err error) {
-	urlData, err = sh.storage.GetUserURL(userID)
+func (sh URLShortener) GetURLByUser(ctx context.Context, userID int) (urlData []storage.URLData, err error) {
+	urlData, err = sh.storage.GetUserURL(ctx, userID)
 	if err != nil {
 		return nil, err
 	}

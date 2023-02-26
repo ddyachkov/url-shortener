@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -31,7 +32,7 @@ func NewURLFileStorage(cfg *config.ServerConfig) URLFileStorage {
 	}
 }
 
-func (s *URLFileStorage) WriteData(url string, userID int) (dataID int, err error) {
+func (s *URLFileStorage) WriteData(ctx context.Context, url string, userID int) (dataID int, err error) {
 	dataID, ok := s.ids[url]
 	if ok {
 		return dataID, nil
@@ -46,7 +47,7 @@ func (s *URLFileStorage) WriteData(url string, userID int) (dataID int, err erro
 	return dataID, nil
 }
 
-func (s URLFileStorage) GetData(dataID int) (url string, err error) {
+func (s URLFileStorage) GetData(ctx context.Context, dataID int) (url string, err error) {
 	url, ok := s.urls[dataID]
 	if !ok {
 		return "", errors.New("URL not found")
@@ -54,17 +55,17 @@ func (s URLFileStorage) GetData(dataID int) (url string, err error) {
 	return url, nil
 }
 
-func (s URLFileStorage) CheckUser(userID int) (exists bool, err error) {
+func (s URLFileStorage) CheckUser(ctx context.Context, userID int) (exists bool, err error) {
 	_, exists = s.users[userID]
 	return exists, nil
 }
 
-func (s *URLFileStorage) MakeNewUser() (userID int, err error) {
+func (s *URLFileStorage) MakeNewUser(ctx context.Context) (userID int, err error) {
 	s.lastUserID += 1
 	return s.lastUserID, nil
 }
 
-func (s URLFileStorage) GetUserURL(userID int) (urlData []URLData, err error) {
+func (s URLFileStorage) GetUserURL(ctx context.Context, userID int) (urlData []URLData, err error) {
 	return s.users[userID], nil
 }
 

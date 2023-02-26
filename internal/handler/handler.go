@@ -16,22 +16,22 @@ import (
 	"github.com/ddyachkov/url-shortener/internal/middleware"
 	"github.com/ddyachkov/url-shortener/internal/storage"
 	"github.com/go-chi/chi"
-	"github.com/jackc/pgx"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type handler struct {
 	service *app.URLShortener
 	config  *config.ServerConfig
-	conn    *pgx.Conn
+	db      *pgxpool.Pool
 }
 
-func NewURLHandler(shortener *app.URLShortener, cfg *config.ServerConfig, c *pgx.Conn) http.Handler {
+func NewURLHandler(shortener *app.URLShortener, cfg *config.ServerConfig, dbpool *pgxpool.Pool) http.Handler {
 	router := chi.NewRouter()
 
 	h := handler{
 		service: shortener,
 		config:  cfg,
-		conn:    c,
+		db:      dbpool,
 	}
 
 	router.Use(middleware.Decompress)
@@ -60,7 +60,7 @@ func (h handler) ReturnTextShortURL(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	newUser, err := h.service.GetUser(&userID)
+	newUser, err := h.service.GetUser(r.Context(), &userID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -73,10 +73,15 @@ func (h handler) ReturnTextShortURL(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	uri, err := h.service.ReturnURI(string(body), userID)
+	httpStatus := http.StatusCreated
+	uri, err := h.service.ReturnURI(r.Context(), string(body), userID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
+		if err.Error() == "Conflict" {
+			httpStatus = http.StatusConflict
+		} else {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
 	}
 
 	shortURL, err := url.JoinPath(h.config.BaseURL, uri)
@@ -86,7 +91,7 @@ func (h handler) ReturnTextShortURL(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Println("ReturnTextShortURL:", string(body), "->", shortURL)
-	writeResponse(w, []byte(shortURL), http.StatusCreated)
+	writeResponse(w, []byte(shortURL), httpStatus)
 }
 
 func (h handler) ReturnJSONShortURL(w http.ResponseWriter, r *http.Request) {
@@ -109,7 +114,7 @@ func (h handler) ReturnJSONShortURL(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	newUser, err := h.service.GetUser(&userID)
+	newUser, err := h.service.GetUser(r.Context(), &userID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -122,10 +127,15 @@ func (h handler) ReturnJSONShortURL(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	uri, err := h.service.ReturnURI(requestBody.URL, userID)
+	httpStatus := http.StatusCreated
+	uri, err := h.service.ReturnURI(r.Context(), requestBody.URL, userID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
+		if err.Error() == "Conflict" {
+			httpStatus = http.StatusConflict
+		} else {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
 	}
 
 	shortURL, err := url.JoinPath(h.config.BaseURL, uri)
@@ -145,7 +155,7 @@ func (h handler) ReturnJSONShortURL(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	log.Println("ReturnJSONShortURL:", requestBody.URL, "->", shortURL)
-	writeResponse(w, responce, http.StatusCreated)
+	writeResponse(w, responce, httpStatus)
 }
 
 func (h handler) ReturnBatchJSONShortURL(w http.ResponseWriter, r *http.Request) {
@@ -166,7 +176,7 @@ func (h handler) ReturnBatchJSONShortURL(w http.ResponseWriter, r *http.Request)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	newUser, err := h.service.GetUser(&userID)
+	newUser, err := h.service.GetUser(r.Context(), &userID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -179,7 +189,7 @@ func (h handler) ReturnBatchJSONShortURL(w http.ResponseWriter, r *http.Request)
 		}
 	}
 
-	if err = h.service.ReturnBatchURI(batchData, userID); err != nil {
+	if err = h.service.ReturnBatchURI(r.Context(), batchData, userID); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -206,7 +216,7 @@ func (h handler) ReturnBatchJSONShortURL(w http.ResponseWriter, r *http.Request)
 
 func (h handler) RedirectToFullURL(w http.ResponseWriter, r *http.Request) {
 	uri := chi.URLParam(r, "URI")
-	fullURL, err := h.service.GetFullURL(uri)
+	fullURL, err := h.service.GetFullURL(r.Context(), uri)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
@@ -234,7 +244,7 @@ func (h handler) GetUserURL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	responceBody, err := h.service.GetURLByUser(userID)
+	responceBody, err := h.service.GetURLByUser(r.Context(), userID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -266,12 +276,12 @@ func (h handler) GetUserURL(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h handler) PingDatabase(w http.ResponseWriter, r *http.Request) {
-	if h.conn == nil {
+	if h.db == nil {
 		http.Error(w, "", http.StatusInternalServerError)
 		return
 	}
 
-	err := h.conn.Ping(context.Background())
+	err := h.db.Ping(context.Background())
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

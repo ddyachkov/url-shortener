@@ -13,7 +13,7 @@ import (
 	"github.com/ddyachkov/url-shortener/internal/config"
 	"github.com/ddyachkov/url-shortener/internal/handler"
 	"github.com/ddyachkov/url-shortener/internal/storage"
-	"github.com/jackc/pgx"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 func main() {
@@ -23,23 +23,21 @@ func main() {
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, os.Interrupt)
 
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
 	var service app.URLShortener
-	var conn *pgx.Conn
+	var dbpool *pgxpool.Pool
 	switch {
 	case cfg.DatabaseDsn != "":
-		poolConfig, err := pgx.ParseConnectionString(cfg.DatabaseDsn)
+		dbpool, err := pgxpool.New(ctx, cfg.DatabaseDsn)
 		if err != nil {
 			log.Fatal(err)
 		}
+		defer dbpool.Close()
 
-		conn, err = pgx.Connect(poolConfig)
-		if err != nil {
-			log.Fatal(err)
-		}
-		defer conn.Close()
-
-		storage := storage.NewURLDBStorage(conn)
-		err = storage.Prepare()
+		storage := storage.NewURLDBStorage(dbpool)
+		err = storage.Prepare(ctx)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -55,7 +53,7 @@ func main() {
 
 	server := http.Server{
 		Addr:    cfg.ServerAddress,
-		Handler: handler.NewURLHandler(&service, &cfg, conn),
+		Handler: handler.NewURLHandler(&service, &cfg, dbpool),
 	}
 
 	go func() {
@@ -67,8 +65,6 @@ func main() {
 
 	<-quit
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
 	if err := server.Shutdown(ctx); err != nil {
 		log.Fatal(err)
 	}

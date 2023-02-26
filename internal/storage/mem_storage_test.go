@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -32,7 +33,7 @@ func TestURLStorage_WriteData(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotID, err := storage.WriteData(tt.args.url, 1)
+			gotID, err := storage.WriteData(context.Background(), tt.args.url, 1)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("URLStorage.GetData() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -45,7 +46,7 @@ func TestURLStorage_WriteData(t *testing.T) {
 func TestURLStorage_GetData(t *testing.T) {
 	storage := NewURLMemStorage()
 	url := "https://www.google.ru"
-	gotID, err := storage.WriteData(url, 1)
+	gotID, err := storage.WriteData(context.Background(), url, 1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -73,7 +74,7 @@ func TestURLStorage_GetData(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotURL, err := storage.GetData(tt.args.id)
+			gotURL, err := storage.GetData(context.Background(), tt.args.id)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("URLStorage.GetData() error = %v, wantErr %v", err, tt.wantErr)
 				return

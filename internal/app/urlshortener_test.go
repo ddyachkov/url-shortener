@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"testing"
@@ -105,7 +106,7 @@ func TestURLShortener_ReturnURI(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotURI, err := shortener.ReturnURI(tt.args.url, 1)
+			gotURI, err := shortener.ReturnURI(context.Background(), tt.args.url, 1)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("URLShortener.ReturnURI() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -119,7 +120,7 @@ func TestURLShortener_GetFullURL(t *testing.T) {
 	storage := storage.NewURLMemStorage()
 	shortener := NewURLShortener(&storage)
 	url := "https://www.google.ru"
-	gotURI, err := shortener.ReturnURI(url, 1)
+	gotURI, err := shortener.ReturnURI(context.Background(), url, 1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -147,7 +148,7 @@ func TestURLShortener_GetFullURL(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotURL, err := shortener.GetFullURL(tt.args.uri)
+			gotURL, err := shortener.GetFullURL(context.Background(), tt.args.uri)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("URLShortener.GetFullURL() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -190,7 +191,7 @@ func TestURLShortener_GetFullURL_WithFileStorage(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotURL, err := shortener.GetFullURL(tt.args.uri)
+			gotURL, err := shortener.GetFullURL(context.Background(), tt.args.uri)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("URLShortener.GetFullURL() error = %v, wantErr %v", err, tt.wantErr)
 				return
