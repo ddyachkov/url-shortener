@@ -40,7 +40,7 @@ func NewServerConfig() ServerConfig {
 func init() {
 	flag.StringVar(&serverAddress, "a", "localhost:8080", "server address")
 	flag.StringVar(&baseURL, "b", "http://localhost:8080", "base URL")
-	flag.StringVar(&databaseDsn, "d", "user=shortener password=shortener host=localhost port=5432 dbname=shortener", "database data source name")
-	flag.StringVar(&fileStoragePath, "f", "./data/data.txt", "file storage path")
+	flag.StringVar(&databaseDsn, "d", "", "database data source name")
+	flag.StringVar(&fileStoragePath, "f", "", "file storage path")
 	flag.StringVar(&secretKey, "k", "thisisthirtytwobytelongsecretkey", "secret key")
 }

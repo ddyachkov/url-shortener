@@ -23,9 +23,9 @@ var cfg config.ServerConfig = config.ServerConfig{
 }
 
 func TestURLHandler_ServeHTTP(t *testing.T) {
-	storage := storage.NewURLStorage()
+	storage := storage.NewURLMemStorage()
 	shortener := app.NewURLShortener(&storage)
-	handler := NewURLHandler(&shortener, &cfg)
+	handler := NewURLHandler(&shortener, &cfg, nil)
 	type header struct {
 		contentType string
 		location    string
@@ -145,7 +145,7 @@ func TestURLHandler_ServeHTTP_WithFileStorage(t *testing.T) {
 		_ = os.Remove(cfg.FileStoragePath)
 	})
 	shortener := app.NewURLShortener(&storage)
-	handler := NewURLHandler(&shortener, &cfg)
+	handler := NewURLHandler(&shortener, &cfg, nil)
 	type header struct {
 		contentType string
 		location    string

@@ -7,7 +7,7 @@ import (
 )
 
 func TestURLStorage_WriteData(t *testing.T) {
-	storage := NewURLStorage()
+	storage := NewURLMemStorage()
 	type args struct {
 		url string
 	}
@@ -43,7 +43,7 @@ func TestURLStorage_WriteData(t *testing.T) {
 }
 
 func TestURLStorage_GetData(t *testing.T) {
-	storage := NewURLStorage()
+	storage := NewURLMemStorage()
 	url := "https://www.google.ru"
 	gotID, err := storage.WriteData(url, 1)
 	if err != nil {

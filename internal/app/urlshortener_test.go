@@ -73,7 +73,7 @@ func Test_makeID(t *testing.T) {
 }
 
 func TestURLShortener_ReturnURI(t *testing.T) {
-	storage := storage.NewURLStorage()
+	storage := storage.NewURLMemStorage()
 	shortener := NewURLShortener(&storage)
 	type args struct {
 		url string
@@ -116,7 +116,7 @@ func TestURLShortener_ReturnURI(t *testing.T) {
 }
 
 func TestURLShortener_GetFullURL(t *testing.T) {
-	storage := storage.NewURLStorage()
+	storage := storage.NewURLMemStorage()
 	shortener := NewURLShortener(&storage)
 	url := "https://www.google.ru"
 	gotURI, err := shortener.ReturnURI(url, 1)

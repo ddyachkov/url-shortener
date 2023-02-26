@@ -2,21 +2,16 @@ package app
 
 import (
 	"net/url"
+
+	"github.com/ddyachkov/url-shortener/internal/storage"
 )
 
-type Storage interface {
-	WriteData(string, int) (int, error)
-	GetData(int) (string, error)
-	MakeNewUser() (int, error)
-	GetUserData(int) ([]int, error)
-}
-
 type URLShortener struct {
-	storage Storage // URL storage
+	storage storage.URLStorage // URL storage
 }
 
 // NewURLShortener() returns a new URLShortener object.
-func NewURLShortener(st Storage) URLShortener {
+func NewURLShortener(st storage.URLStorage) URLShortener {
 	return URLShortener{
 		storage: st,
 	}
@@ -45,31 +40,35 @@ func (sh *URLShortener) GetFullURL(uri string) (fullURL string, err error) {
 	return fullURL, nil
 }
 
-func (sh URLShortener) GetNewUser() (userID int, err error) {
-	userID, err = sh.storage.MakeNewUser()
+func (sh URLShortener) GetUser(userID *int) (new bool, err error) {
+	exists, err := sh.storage.CheckUser(*userID)
 	if err != nil {
-		return 0, err
+		return false, err
 	}
-	return userID, nil
+
+	if exists {
+		return false, nil
+	}
+
+	*userID, err = sh.storage.MakeNewUser()
+	if err != nil {
+		return false, err
+	}
+
+	return true, nil
 }
 
-func (sh URLShortener) GetURLByUser(userID int) (urls map[string]string, err error) {
-	urls = make(map[string]string)
-	dataIDs, err := sh.storage.GetUserData(userID)
+func (sh URLShortener) GetURLByUser(userID int) (urlData []storage.URLData, err error) {
+	urlData, err = sh.storage.GetUserURL(userID)
 	if err != nil {
 		return nil, err
 	}
 
-	for _, dataID := range dataIDs {
-		uri := makeURI(dataID)
-		url, err := sh.storage.GetData(dataID)
-		if err != nil {
-			return nil, err
-		}
-		urls[uri] = url
+	for i := range urlData {
+		urlData[i].URI = makeURI(urlData[i].ID)
 	}
 
-	return urls, nil
+	return urlData, nil
 }
 
 // makeURI returns URI from data ID

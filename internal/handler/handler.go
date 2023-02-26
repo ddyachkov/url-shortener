@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"io"
@@ -20,14 +21,16 @@ import (
 type handler struct {
 	service *app.URLShortener
 	config  *config.ServerConfig
+	conn    *pgx.Conn
 }
 
-func NewURLHandler(shortener *app.URLShortener, cfg *config.ServerConfig) http.Handler {
+func NewURLHandler(shortener *app.URLShortener, cfg *config.ServerConfig, c *pgx.Conn) http.Handler {
 	router := chi.NewRouter()
 
 	h := handler{
 		service: shortener,
 		config:  cfg,
+		conn:    c,
 	}
 
 	router.Use(middleware.Decompress)
@@ -50,21 +53,18 @@ func (h handler) ReturnTextShortURL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var userID int
-	cookieValue, err := cookie.GetEncryptedValue(r, "user_id", []byte(h.config.SecretKey))
+	userID, err := getUserID(r, []byte(h.config.SecretKey))
 	if err != nil {
-		userID, err = h.service.GetNewUser()
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	newUser, err := h.service.GetUser(&userID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if newUser {
 		err = cookie.WriteEncryptedValue(w, "user_id", strconv.Itoa(userID), []byte(h.config.SecretKey))
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-	} else {
-		userID, err = strconv.Atoi(cookieValue)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -102,21 +102,18 @@ func (h handler) ReturnJSONShortURL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var userID int
-	cookieValue, err := cookie.GetEncryptedValue(r, "user_id", []byte(h.config.SecretKey))
+	userID, err := getUserID(r, []byte(h.config.SecretKey))
 	if err != nil {
-		userID, err = h.service.GetNewUser()
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	newUser, err := h.service.GetUser(&userID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if newUser {
 		err = cookie.WriteEncryptedValue(w, "user_id", strconv.Itoa(userID), []byte(h.config.SecretKey))
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-	} else {
-		userID, err = strconv.Atoi(cookieValue)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -173,7 +170,7 @@ func (h handler) GetUserURL(w http.ResponseWriter, r *http.Request) {
 		OriginalURL string `json:"original_url"`
 	}
 
-	cookieValue, err := cookie.GetEncryptedValue(r, "user_id", []byte(h.config.SecretKey))
+	userID, err := getUserID(r, []byte(h.config.SecretKey))
 	if err != nil {
 		switch {
 		case errors.Is(err, http.ErrNoCookie):
@@ -184,30 +181,25 @@ func (h handler) GetUserURL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userID, err := strconv.Atoi(cookieValue)
+	userData, err := h.service.GetURLByUser(userID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	urls, err := h.service.GetURLByUser(userID)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	if len(urls) == 0 {
+	if len(userData) == 0 {
 		http.Error(w, "[]", http.StatusNoContent)
 		return
 	}
+
 	responceBody := make([]userURL, 0)
-	for uri, originalURL := range urls {
-		shortURL, err := url.JoinPath(h.config.BaseURL, uri)
+	for _, data := range userData {
+		shortURL, err := url.JoinPath(h.config.BaseURL, data.URI)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		responceBody = append(responceBody, userURL{ShortURL: shortURL, OriginalURL: originalURL})
+		responceBody = append(responceBody, userURL{ShortURL: shortURL, OriginalURL: data.URL})
 	}
 
 	responce, err := json.Marshal(responceBody)
@@ -216,25 +208,22 @@ func (h handler) GetUserURL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Println("GetUserURL:", cookieValue)
+	log.Println("GetUserURL:", userID)
 	w.Header().Set("Content-Type", "application/json")
 	writeResponse(w, responce, http.StatusOK)
 }
 
 func (h handler) PingDatabase(w http.ResponseWriter, r *http.Request) {
-	poolConfig, err := pgx.ParseConnectionString(h.config.DatabaseDsn)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	if h.conn == nil {
+		http.Error(w, "", http.StatusInternalServerError)
 		return
 	}
 
-	conn, err := pgx.Connect(poolConfig)
+	err := h.conn.Ping(context.Background())
 	if err != nil {
-		log.Println(err.Error())
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	defer conn.Close()
 
 	writeResponse(w, []byte(""), http.StatusOK)
 }
@@ -242,4 +231,18 @@ func (h handler) PingDatabase(w http.ResponseWriter, r *http.Request) {
 func writeResponse(w http.ResponseWriter, text []byte, code int) {
 	w.WriteHeader(code)
 	w.Write(text)
+}
+
+func getUserID(r *http.Request, secretKey []byte) (userID int, err error) {
+	cookieValue, err := cookie.GetEncryptedValue(r, "user_id", []byte(secretKey))
+	if err != nil {
+		return 0, nil
+	}
+
+	userID, err = strconv.Atoi(cookieValue)
+	if err != nil {
+		return 0, nil
+	}
+
+	return userID, nil
 }

@@ -13,6 +13,7 @@ import (
 	"github.com/ddyachkov/url-shortener/internal/config"
 	"github.com/ddyachkov/url-shortener/internal/handler"
 	"github.com/ddyachkov/url-shortener/internal/storage"
+	"github.com/jackc/pgx"
 )
 
 func main() {
@@ -22,13 +23,39 @@ func main() {
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, os.Interrupt)
 
-	storage := storage.NewURLFileStorage(&cfg)
-	storage.LoadData()
+	var service app.URLShortener
+	var conn *pgx.Conn
+	switch {
+	case cfg.DatabaseDsn != "":
+		poolConfig, err := pgx.ParseConnectionString(cfg.DatabaseDsn)
+		if err != nil {
+			log.Fatal(err)
+		}
 
-	service := app.NewURLShortener(&storage)
+		conn, err = pgx.Connect(poolConfig)
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer conn.Close()
+
+		storage := storage.NewURLDBStorage(conn)
+		err = storage.Prepare()
+		if err != nil {
+			log.Fatal(err)
+		}
+		service = app.NewURLShortener(&storage)
+	case cfg.FileStoragePath != "":
+		storage := storage.NewURLFileStorage(&cfg)
+		storage.LoadData()
+		service = app.NewURLShortener(&storage)
+	default:
+		storage := storage.NewURLMemStorage()
+		service = app.NewURLShortener(&storage)
+	}
+
 	server := http.Server{
 		Addr:    cfg.ServerAddress,
-		Handler: handler.NewURLHandler(&service, &cfg),
+		Handler: handler.NewURLHandler(&service, &cfg, conn),
 	}
 
 	go func() {

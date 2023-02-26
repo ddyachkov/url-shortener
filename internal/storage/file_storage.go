@@ -15,7 +15,7 @@ type URLFileStorage struct {
 	config     *config.ServerConfig
 	urls       map[int]string
 	ids        map[string]int
-	users      map[int][]int
+	users      map[int][]URLData
 	lastDataID int
 	lastUserID int
 }
@@ -25,7 +25,7 @@ func NewURLFileStorage(cfg *config.ServerConfig) URLFileStorage {
 		config:     cfg,
 		urls:       make(map[int]string),
 		ids:        make(map[string]int),
-		users:      make(map[int][]int),
+		users:      make(map[int][]URLData),
 		lastDataID: 0,
 		lastUserID: 0,
 	}
@@ -40,7 +40,7 @@ func (s *URLFileStorage) WriteData(url string, userID int) (dataID int, err erro
 	dataID = s.lastDataID
 	s.urls[dataID] = url
 	s.ids[url] = dataID
-	s.users[userID] = append(s.users[userID], dataID)
+	s.users[userID] = append(s.users[userID], URLData{ID: dataID, URL: url})
 	s.saveData(dataID, url, userID)
 
 	return dataID, nil
@@ -54,12 +54,17 @@ func (s URLFileStorage) GetData(dataID int) (url string, err error) {
 	return url, nil
 }
 
+func (s URLFileStorage) CheckUser(userID int) (exists bool, err error) {
+	_, exists = s.users[userID]
+	return exists, nil
+}
+
 func (s *URLFileStorage) MakeNewUser() (userID int, err error) {
 	s.lastUserID += 1
 	return s.lastUserID, nil
 }
 
-func (s URLFileStorage) GetUserData(userID int) (dataIDs []int, err error) {
+func (s URLFileStorage) GetUserURL(userID int) (urlData []URLData, err error) {
 	return s.users[userID], nil
 }
 
@@ -93,7 +98,7 @@ func (s *URLFileStorage) LoadData() {
 		}
 		s.urls[dataID] = url
 		s.ids[url] = dataID
-		s.users[userID] = append(s.users[userID], dataID)
+		s.users[userID] = append(s.users[userID], URLData{ID: dataID, URL: url})
 		if dataID > s.lastDataID {
 			s.lastDataID = dataID
 		}
