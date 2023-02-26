@@ -149,11 +149,6 @@ func (h handler) ReturnJSONShortURL(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h handler) ReturnBatchJSONShortURL(w http.ResponseWriter, r *http.Request) {
-	if h.conn == nil {
-		http.Error(w, "", http.StatusInternalServerError)
-		return
-	}
-
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -190,7 +185,7 @@ func (h handler) ReturnBatchJSONShortURL(w http.ResponseWriter, r *http.Request)
 	}
 
 	for i := range batchData {
-		shortURL, err := url.JoinPath(h.config.BaseURL, batchData[i].ShortURL)
+		shortURL, err := url.JoinPath(h.config.BaseURL, batchData[i].URI)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
