@@ -95,7 +95,7 @@ func TestURLShortener_ReturnURI(t *testing.T) {
 			name:    "Positive_SameURL",
 			args:    args{url: "https://www.google.ru"},
 			wantURI: "b",
-			wantErr: false,
+			wantErr: true,
 		},
 		{
 			name:    "Negative_InvalidURL",

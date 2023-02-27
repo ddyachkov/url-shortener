@@ -24,10 +24,12 @@ func (sh *URLShortener) ReturnURI(ctx context.Context, fullURL string, userID in
 	if err != nil {
 		return "", err
 	}
+
 	id, err := sh.storage.WriteData(ctx, fullURL, userID)
 	if id == 0 {
 		return "", err
 	}
+
 	return makeURI(id), err
 }
 
@@ -37,11 +39,14 @@ func (sh *URLShortener) ReturnBatchURI(ctx context.Context, batchData []storage.
 		if err != nil {
 			return err
 		}
+	}
 
-		batchData[i].ID, err = sh.storage.WriteData(ctx, batchData[i].OriginalURL, userID)
-		if err != nil {
-			return err
-		}
+	err = sh.storage.WriteBatchData(ctx, batchData, userID)
+	if err != nil {
+		return err
+	}
+
+	for i := range batchData {
 		batchData[i].URI = makeURI(batchData[i].ID)
 	}
 

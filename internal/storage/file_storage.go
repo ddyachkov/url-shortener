@@ -35,7 +35,7 @@ func NewURLFileStorage(cfg *config.ServerConfig) URLFileStorage {
 func (s *URLFileStorage) WriteData(ctx context.Context, url string, userID int) (dataID int, err error) {
 	dataID, ok := s.ids[url]
 	if ok {
-		return dataID, nil
+		return dataID, errors.New("Conflict")
 	}
 	s.lastDataID += 1
 	dataID = s.lastDataID
@@ -45,6 +45,19 @@ func (s *URLFileStorage) WriteData(ctx context.Context, url string, userID int) 
 	s.saveData(dataID, url, userID)
 
 	return dataID, nil
+}
+
+func (s *URLFileStorage) WriteBatchData(ctx context.Context, batchData []URLData, userID int) (err error) {
+	for i := range batchData {
+		s.lastDataID += 1
+		batchData[i].ID = s.lastDataID
+		s.urls[batchData[i].ID] = batchData[i].OriginalURL
+		s.ids[batchData[i].OriginalURL] = batchData[i].ID
+		s.users[userID] = append(s.users[userID], batchData[i])
+		s.saveData(batchData[i].ID, batchData[i].OriginalURL, userID)
+	}
+
+	return nil
 }
 
 func (s URLFileStorage) GetData(ctx context.Context, dataID int) (url string, err error) {

@@ -4,6 +4,7 @@ import "context"
 
 type URLStorage interface {
 	WriteData(context.Context, string, int) (int, error)
+	WriteBatchData(context.Context, []URLData, int) error
 	GetData(context.Context, int) (string, error)
 	CheckUser(context.Context, int) (bool, error)
 	MakeNewUser(context.Context) (int, error)

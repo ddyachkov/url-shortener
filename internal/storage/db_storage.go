@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -41,6 +42,31 @@ func (s URLDBStorage) WriteData(ctx context.Context, url string, userID int) (da
 	}
 
 	return dataID, nil
+}
+
+func (s URLDBStorage) WriteBatchData(ctx context.Context, batchData []URLData, userID int) (err error) {
+	query := `INSERT INTO public.url_data (url, user_id) VALUES (@url, @userID) RETURNING id`
+
+	batch := &pgx.Batch{}
+	for i := range batchData {
+		args := pgx.NamedArgs{
+			"url":    batchData[i].OriginalURL,
+			"userID": userID,
+		}
+		batch.Queue(query, args)
+	}
+
+	results := s.db.SendBatch(ctx, batch)
+	defer results.Close()
+
+	for i := range batchData {
+		err := results.QueryRow().Scan(batchData[i].ID)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (s URLDBStorage) GetData(ctx context.Context, dataID int) (url string, err error) {

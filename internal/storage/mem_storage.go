@@ -26,7 +26,7 @@ func NewURLMemStorage() URLMemStorage {
 func (s *URLMemStorage) WriteData(ctx context.Context, url string, userID int) (dataID int, err error) {
 	dataID, ok := s.ids[url]
 	if ok {
-		return dataID, nil
+		return dataID, errors.New("Conflict")
 	}
 	s.lastDataID += 1
 	dataID = s.lastDataID
@@ -35,6 +35,18 @@ func (s *URLMemStorage) WriteData(ctx context.Context, url string, userID int) (
 	s.users[userID] = append(s.users[userID], URLData{ID: dataID, OriginalURL: url})
 
 	return dataID, nil
+}
+
+func (s *URLMemStorage) WriteBatchData(ctx context.Context, batchData []URLData, userID int) (err error) {
+	for i := range batchData {
+		s.lastDataID += 1
+		batchData[i].ID = s.lastDataID
+		s.urls[batchData[i].ID] = batchData[i].OriginalURL
+		s.ids[batchData[i].OriginalURL] = batchData[i].ID
+		s.users[userID] = append(s.users[userID], batchData[i])
+	}
+
+	return nil
 }
 
 func (s URLMemStorage) GetData(ctx context.Context, dataID int) (url string, err error) {

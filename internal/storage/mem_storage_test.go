@@ -25,10 +25,10 @@ func TestURLStorage_WriteData(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:    "Positive_SameData",
+			name:    "Negative_SameData",
 			args:    args{url: "https://www.google.ru"},
 			wantID:  1,
-			wantErr: false,
+			wantErr: true,
 		},
 	}
 	for _, tt := range tests {
