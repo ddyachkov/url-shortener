@@ -60,7 +60,7 @@ func (s URLDBStorage) WriteBatchData(ctx context.Context, batchData []URLData, u
 	defer results.Close()
 
 	for i := range batchData {
-		err := results.QueryRow().Scan(batchData[i].ID)
+		err := results.QueryRow().Scan(&batchData[i].ID)
 		if err != nil {
 			return err
 		}
