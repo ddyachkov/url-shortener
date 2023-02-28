@@ -12,8 +12,8 @@ type URLShortener struct {
 }
 
 // NewURLShortener() returns a new URLShortener object.
-func NewURLShortener(st storage.URLStorage) URLShortener {
-	return URLShortener{
+func NewURLShortener(st storage.URLStorage) *URLShortener {
+	return &URLShortener{
 		storage: st,
 	}
 }
@@ -33,24 +33,25 @@ func (sh *URLShortener) ReturnURI(ctx context.Context, fullURL string, userID in
 	return makeURI(id), err
 }
 
-func (sh *URLShortener) ReturnBatchURI(ctx context.Context, batchData []storage.URLData, userID int) (err error) {
-	for i := range batchData {
-		_, err = url.ParseRequestURI(batchData[i].OriginalURL)
+func (sh *URLShortener) ReturnBatchURI(ctx context.Context, batchURL []string, userID int) (batchURI []string, err error) {
+	for i := range batchURL {
+		_, err = url.ParseRequestURI(batchURL[i])
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
 
-	err = sh.storage.WriteBatchData(ctx, batchData, userID)
+	batchID, err := sh.storage.WriteBatchData(ctx, batchURL, userID)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	for i := range batchData {
-		batchData[i].URI = makeURI(batchData[i].ID)
+	batchURI = make([]string, 0)
+	for i := range batchID {
+		batchURI = append(batchURI, makeURI(batchID[i]))
 	}
 
-	return nil
+	return batchURI, nil
 }
 
 // GetFullURL returns full URL for received URI. IF URL is not found then returns error.
@@ -63,22 +64,13 @@ func (sh *URLShortener) GetFullURL(ctx context.Context, uri string) (fullURL str
 	return fullURL, nil
 }
 
-func (sh URLShortener) GetUser(ctx context.Context, userID *int) (new bool, err error) {
-	exists, err := sh.storage.CheckUser(ctx, *userID)
+func (sh URLShortener) GetUser(ctx context.Context, searchID int) (foundID int, err error) {
+	foundID, err = sh.storage.CheckUser(ctx, searchID)
 	if err != nil {
-		return false, err
+		return searchID, err
 	}
 
-	if exists {
-		return false, nil
-	}
-
-	*userID, err = sh.storage.MakeNewUser(ctx)
-	if err != nil {
-		return false, err
-	}
-
-	return true, nil
+	return foundID, nil
 }
 
 func (sh URLShortener) GetURLByUser(ctx context.Context, userID int) (urlData []storage.URLData, err error) {

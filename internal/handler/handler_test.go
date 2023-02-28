@@ -15,7 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var cfg config.ServerConfig = config.ServerConfig{
+var cfg = config.ServerConfig{
 	ServerAddress:   "localhost:8080",
 	BaseURL:         "http://localhost:8080",
 	FileStoragePath: "/tmp/data.txt",
@@ -24,8 +24,8 @@ var cfg config.ServerConfig = config.ServerConfig{
 
 func TestURLHandler_ServeHTTP(t *testing.T) {
 	storage := storage.NewURLMemStorage()
-	shortener := app.NewURLShortener(&storage)
-	handler := NewURLHandler(&shortener, &cfg, nil)
+	service := app.NewURLShortener(storage)
+	handler := NewURLHandler(service, &cfg, nil)
 	type header struct {
 		contentType string
 		location    string
@@ -163,12 +163,12 @@ func TestURLHandler_ServeHTTP(t *testing.T) {
 
 func TestURLHandler_ServeHTTP_WithFileStorage(t *testing.T) {
 	storage := storage.NewURLFileStorage(&cfg)
-	storage.LoadData()
+
 	t.Cleanup(func() {
 		_ = os.Remove(cfg.FileStoragePath)
 	})
-	shortener := app.NewURLShortener(&storage)
-	handler := NewURLHandler(&shortener, &cfg, nil)
+	service := app.NewURLShortener(storage)
+	handler := NewURLHandler(service, &cfg, nil)
 	type header struct {
 		contentType string
 		location    string

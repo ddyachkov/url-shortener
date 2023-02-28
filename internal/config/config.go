@@ -23,15 +23,15 @@ type ServerConfig struct {
 	SecretKey       string `env:"SECRET_KEY"`
 }
 
-func NewServerConfig() ServerConfig {
-	cfg := ServerConfig{
+func DefaultServerConfig() *ServerConfig {
+	cfg := &ServerConfig{
 		ServerAddress:   serverAddress,
 		BaseURL:         baseURL,
 		DatabaseDsn:     databaseDsn,
 		FileStoragePath: fileStoragePath,
 		SecretKey:       secretKey,
 	}
-	if err := env.Parse(&cfg); err != nil {
+	if err := env.Parse(cfg); err != nil {
 		log.Fatal(err)
 	}
 	return cfg

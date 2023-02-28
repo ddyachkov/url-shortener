@@ -12,7 +12,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var cfg config.ServerConfig = config.ServerConfig{FileStoragePath: "/tmp/data.txt", SecretKey: "thisisthirtytwobytelongsecretkey"}
+var cfg = config.ServerConfig{
+	FileStoragePath: "/tmp/data.txt",
+	SecretKey:       "thisisthirtytwobytelongsecretkey",
+}
 
 func createFile(t *testing.T, fileStoragePath string, content string) {
 	file, err := os.Create(fileStoragePath)
@@ -75,7 +78,7 @@ func Test_makeID(t *testing.T) {
 
 func TestURLShortener_ReturnURI(t *testing.T) {
 	storage := storage.NewURLMemStorage()
-	shortener := NewURLShortener(&storage)
+	service := NewURLShortener(storage)
 	type args struct {
 		url string
 	}
@@ -106,7 +109,7 @@ func TestURLShortener_ReturnURI(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotURI, err := shortener.ReturnURI(context.Background(), tt.args.url, 1)
+			gotURI, err := service.ReturnURI(context.Background(), tt.args.url, 1)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("URLShortener.ReturnURI() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -118,9 +121,9 @@ func TestURLShortener_ReturnURI(t *testing.T) {
 
 func TestURLShortener_GetFullURL(t *testing.T) {
 	storage := storage.NewURLMemStorage()
-	shortener := NewURLShortener(&storage)
+	service := NewURLShortener(storage)
 	url := "https://www.google.ru"
-	gotURI, err := shortener.ReturnURI(context.Background(), url, 1)
+	gotURI, err := service.ReturnURI(context.Background(), url, 1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -148,7 +151,7 @@ func TestURLShortener_GetFullURL(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotURL, err := shortener.GetFullURL(context.Background(), tt.args.uri)
+			gotURL, err := service.GetFullURL(context.Background(), tt.args.uri)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("URLShortener.GetFullURL() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -164,8 +167,7 @@ func TestURLShortener_GetFullURL_WithFileStorage(t *testing.T) {
 	userID := 1
 	createFile(t, cfg.FileStoragePath, fmt.Sprint(dataID, " ", url, " ", userID))
 	storage := storage.NewURLFileStorage(&cfg)
-	storage.LoadData()
-	shortener := NewURLShortener(&storage)
+	service := NewURLShortener(storage)
 
 	type args struct {
 		uri string
@@ -191,7 +193,7 @@ func TestURLShortener_GetFullURL_WithFileStorage(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotURL, err := shortener.GetFullURL(context.Background(), tt.args.uri)
+			gotURL, err := service.GetFullURL(context.Background(), tt.args.uri)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("URLShortener.GetFullURL() error = %v, wantErr %v", err, tt.wantErr)
 				return

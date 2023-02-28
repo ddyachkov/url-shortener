@@ -2,7 +2,6 @@ package storage
 
 import (
 	"context"
-	"errors"
 )
 
 type URLMemStorage struct {
@@ -13,8 +12,8 @@ type URLMemStorage struct {
 	lastUserID int
 }
 
-func NewURLMemStorage() URLMemStorage {
-	return URLMemStorage{
+func NewURLMemStorage() *URLMemStorage {
+	return &URLMemStorage{
 		urls:       make(map[int]string),
 		ids:        make(map[string]int),
 		users:      make(map[int][]URLData),
@@ -26,7 +25,7 @@ func NewURLMemStorage() URLMemStorage {
 func (s *URLMemStorage) WriteData(ctx context.Context, url string, userID int) (dataID int, err error) {
 	dataID, ok := s.ids[url]
 	if ok {
-		return dataID, errors.New("Conflict")
+		return dataID, ErrWriteDataConflict
 	}
 	s.lastDataID += 1
 	dataID = s.lastDataID
@@ -37,22 +36,23 @@ func (s *URLMemStorage) WriteData(ctx context.Context, url string, userID int) (
 	return dataID, nil
 }
 
-func (s *URLMemStorage) WriteBatchData(ctx context.Context, batchData []URLData, userID int) (err error) {
-	for i := range batchData {
+func (s *URLMemStorage) WriteBatchData(ctx context.Context, batchURL []string, userID int) (batchID []int, err error) {
+	batchID = make([]int, 0)
+	for i := range batchURL {
 		s.lastDataID += 1
-		batchData[i].ID = s.lastDataID
-		s.urls[batchData[i].ID] = batchData[i].OriginalURL
-		s.ids[batchData[i].OriginalURL] = batchData[i].ID
-		s.users[userID] = append(s.users[userID], batchData[i])
+		batchID = append(batchID, s.lastDataID)
+		s.urls[s.lastDataID] = batchURL[i]
+		s.ids[batchURL[i]] = s.lastDataID
+		s.users[userID] = append(s.users[userID], URLData{ID: s.lastDataID, OriginalURL: batchURL[i]})
 	}
 
-	return nil
+	return batchID, nil
 }
 
 func (s URLMemStorage) GetData(ctx context.Context, dataID int) (url string, err error) {
 	url, ok := s.urls[dataID]
 	if !ok {
-		return "", errors.New("URL not found")
+		return "", ErrURLNotFound
 	}
 	return url, nil
 }
@@ -62,9 +62,12 @@ func (s *URLMemStorage) MakeNewUser(ctx context.Context) (userID int, err error)
 	return s.lastUserID, nil
 }
 
-func (s URLMemStorage) CheckUser(ctx context.Context, userID int) (exists bool, err error) {
-	_, exists = s.users[userID]
-	return exists, nil
+func (s URLMemStorage) CheckUser(ctx context.Context, searchID int) (foundID int, err error) {
+	_, exists := s.users[searchID]
+	if exists {
+		return searchID, nil
+	}
+	return s.MakeNewUser(ctx)
 }
 
 func (s URLMemStorage) GetUserURL(ctx context.Context, userID int) (urlData []URLData, err error) {

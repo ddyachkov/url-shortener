@@ -4,7 +4,9 @@ import (
 	"context"
 	"errors"
 
+	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -12,31 +14,30 @@ type URLDBStorage struct {
 	db *pgxpool.Pool
 }
 
-func NewURLDBStorage(dbpool *pgxpool.Pool) URLDBStorage {
-	return URLDBStorage{
+func NewURLDBStorage(dbpool *pgxpool.Pool, ctx context.Context) (storage *URLDBStorage, err error) {
+	storage = &URLDBStorage{
 		db: dbpool,
 	}
+
+	err = storage.Prepare(ctx)
+	if err != nil {
+		return storage, err
+	}
+
+	return storage, nil
 }
 
 func (s URLDBStorage) WriteData(ctx context.Context, url string, userID int) (dataID int, err error) {
+
 	err = s.db.QueryRow(ctx, "INSERT INTO public.url_data (url, user_id) VALUES ($1, $2) RETURNING id", url, userID).Scan(&dataID)
 	if err != nil {
-		/* Не работает, хз почему
-		var pgErr pgx.PgError
-		if errors.As(err, &pgErr) && pgErr.code == pgerrcode.UniqueViolation{
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.UniqueViolation {
 			err = s.db.QueryRow(ctx, "SELECT id FROM public.url_data ud WHERE ud.url = $1", url).Scan(&dataID)
 			if err != nil {
 				return 0, err
 			}
-			return dataID, nil
-		}
-		*/
-		if err.Error() == "ERROR: duplicate key value violates unique constraint \"url_data_url_key\" (SQLSTATE 23505)" {
-			err = s.db.QueryRow(ctx, "SELECT id FROM public.url_data ud WHERE ud.url = $1", url).Scan(&dataID)
-			if err != nil {
-				return 0, err
-			}
-			return dataID, errors.New("Conflict")
+			return dataID, ErrWriteDataConflict
 		}
 		return 0, err
 	}
@@ -44,13 +45,13 @@ func (s URLDBStorage) WriteData(ctx context.Context, url string, userID int) (da
 	return dataID, nil
 }
 
-func (s URLDBStorage) WriteBatchData(ctx context.Context, batchData []URLData, userID int) (err error) {
+func (s URLDBStorage) WriteBatchData(ctx context.Context, batchURL []string, userID int) (batchID []int, err error) {
 	query := `INSERT INTO public.url_data (url, user_id) VALUES (@url, @userID) RETURNING id`
 
 	batch := &pgx.Batch{}
-	for i := range batchData {
+	for i := range batchURL {
 		args := pgx.NamedArgs{
-			"url":    batchData[i].OriginalURL,
+			"url":    batchURL[i],
 			"userID": userID,
 		}
 		batch.Queue(query, args)
@@ -59,32 +60,40 @@ func (s URLDBStorage) WriteBatchData(ctx context.Context, batchData []URLData, u
 	results := s.db.SendBatch(ctx, batch)
 	defer results.Close()
 
-	for i := range batchData {
-		err := results.QueryRow().Scan(&batchData[i].ID)
+	batchID = make([]int, 0)
+	for i := 0; i < len(batchURL); i++ {
+		var dataID int
+		err := results.QueryRow().Scan(&dataID)
 		if err != nil {
-			return err
+			return nil, err
 		}
+		batchID = append(batchID, dataID)
 	}
 
-	return nil
+	return batchID, nil
 }
 
 func (s URLDBStorage) GetData(ctx context.Context, dataID int) (url string, err error) {
 	err = s.db.QueryRow(ctx, "SELECT ud.url FROM public.url_data ud WHERE ud.id = $1", dataID).Scan(&url)
 	if err != nil {
-		return "", err
+		return "", ErrURLNotFound
 	}
 
 	return url, nil
 }
 
-func (s URLDBStorage) CheckUser(ctx context.Context, userID int) (exists bool, err error) {
-	err = s.db.QueryRow(ctx, "SELECT EXISTS (SELECT 1 FROM public.user u WHERE u.id = $1)", userID).Scan(&exists)
+func (s URLDBStorage) CheckUser(ctx context.Context, searchID int) (foundID int, err error) {
+	var exists bool
+	err = s.db.QueryRow(ctx, "SELECT EXISTS (SELECT 1 FROM public.user u WHERE u.id = $1)", searchID).Scan(&exists)
 	if err != nil {
-		return false, err
+		return searchID, err
 	}
 
-	return exists, nil
+	if exists {
+		return searchID, nil
+	}
+
+	return s.MakeNewUser(ctx)
 }
 
 func (s URLDBStorage) MakeNewUser(ctx context.Context) (userID int, err error) {

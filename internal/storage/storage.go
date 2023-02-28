@@ -1,12 +1,18 @@
 package storage
 
-import "context"
+import (
+	"context"
+	"errors"
+)
+
+var ErrURLNotFound = errors.New("URL not found")
+var ErrWriteDataConflict = errors.New("write data conflict")
 
 type URLStorage interface {
 	WriteData(context.Context, string, int) (int, error)
-	WriteBatchData(context.Context, []URLData, int) error
+	WriteBatchData(context.Context, []string, int) ([]int, error)
 	GetData(context.Context, int) (string, error)
-	CheckUser(context.Context, int) (bool, error)
+	CheckUser(context.Context, int) (int, error)
 	MakeNewUser(context.Context) (int, error)
 	GetUserURL(context.Context, int) ([]URLData, error)
 }

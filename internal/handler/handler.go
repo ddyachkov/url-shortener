@@ -33,8 +33,7 @@ func NewURLHandler(shortener *app.URLShortener, cfg *config.ServerConfig, dbpool
 		db:      dbpool,
 	}
 
-	router.Use(middleware.Decompress)
-	router.Use(middleware.Compress)
+	router.Use(middleware.Decompress, middleware.Compress)
 
 	router.Post("/", h.ReturnTextShortURL)
 	router.Post("/api/shorten", h.ReturnJSONShortURL)
@@ -59,13 +58,13 @@ func (h handler) ReturnTextShortURL(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	newUser, err := h.service.GetUser(r.Context(), &userID)
+	gotUserID, err := h.service.GetUser(r.Context(), userID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	if newUser {
-		err = cookie.WriteEncryptedValue(w, "user_id", strconv.Itoa(userID), []byte(h.config.SecretKey))
+	if userID != gotUserID {
+		err = cookie.WriteEncryptedValue(w, "user_id", strconv.Itoa(gotUserID), []byte(h.config.SecretKey))
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -75,7 +74,7 @@ func (h handler) ReturnTextShortURL(w http.ResponseWriter, r *http.Request) {
 	httpStatus := http.StatusCreated
 	uri, err := h.service.ReturnURI(r.Context(), string(body), userID)
 	if err != nil {
-		if err.Error() == "Conflict" {
+		if errors.Is(err, storage.ErrWriteDataConflict) {
 			httpStatus = http.StatusConflict
 		} else {
 			http.Error(w, err.Error(), http.StatusBadRequest)
@@ -113,13 +112,13 @@ func (h handler) ReturnJSONShortURL(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	newUser, err := h.service.GetUser(r.Context(), &userID)
+	gotUserID, err := h.service.GetUser(r.Context(), userID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	if newUser {
-		err = cookie.WriteEncryptedValue(w, "user_id", strconv.Itoa(userID), []byte(h.config.SecretKey))
+	if userID != gotUserID {
+		err = cookie.WriteEncryptedValue(w, "user_id", strconv.Itoa(gotUserID), []byte(h.config.SecretKey))
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -129,7 +128,7 @@ func (h handler) ReturnJSONShortURL(w http.ResponseWriter, r *http.Request) {
 	httpStatus := http.StatusCreated
 	uri, err := h.service.ReturnURI(r.Context(), requestBody.URL, userID)
 	if err != nil {
-		if err.Error() == "Conflict" {
+		if errors.Is(err, storage.ErrWriteDataConflict) {
 			httpStatus = http.StatusConflict
 		} else {
 			http.Error(w, err.Error(), http.StatusBadRequest)
@@ -175,26 +174,31 @@ func (h handler) ReturnBatchJSONShortURL(w http.ResponseWriter, r *http.Request)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	newUser, err := h.service.GetUser(r.Context(), &userID)
+	gotUserID, err := h.service.GetUser(r.Context(), userID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	if newUser {
-		err = cookie.WriteEncryptedValue(w, "user_id", strconv.Itoa(userID), []byte(h.config.SecretKey))
+	if userID != gotUserID {
+		err = cookie.WriteEncryptedValue(w, "user_id", strconv.Itoa(gotUserID), []byte(h.config.SecretKey))
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 	}
 
-	if err = h.service.ReturnBatchURI(r.Context(), batchData, userID); err != nil {
+	batchURL := make([]string, 0)
+	for i := range batchData {
+		batchURL = append(batchURL, batchData[i].OriginalURL)
+	}
+	batchURI, err := h.service.ReturnBatchURI(r.Context(), batchURL, userID)
+	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	for i := range batchData {
-		shortURL, err := url.JoinPath(h.config.BaseURL, batchData[i].URI)
+	for i := range batchURI {
+		shortURL, err := url.JoinPath(h.config.BaseURL, batchURI[i])
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
