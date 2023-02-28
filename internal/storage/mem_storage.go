@@ -63,8 +63,7 @@ func (s *URLMemStorage) MakeNewUser(ctx context.Context) (userID int, err error)
 }
 
 func (s URLMemStorage) CheckUser(ctx context.Context, searchID int) (foundID int, err error) {
-	_, exists := s.users[searchID]
-	if exists {
+	if _, exists := s.users[searchID]; exists {
 		return searchID, nil
 	}
 	return s.MakeNewUser(ctx)

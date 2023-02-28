@@ -65,12 +65,7 @@ func (sh *URLShortener) GetFullURL(ctx context.Context, uri string) (fullURL str
 }
 
 func (sh URLShortener) GetUser(ctx context.Context, searchID int) (foundID int, err error) {
-	foundID, err = sh.storage.CheckUser(ctx, searchID)
-	if err != nil {
-		return searchID, err
-	}
-
-	return foundID, nil
+	return sh.storage.CheckUser(ctx, searchID)
 }
 
 func (sh URLShortener) GetURLByUser(ctx context.Context, userID int) (urlData []storage.URLData, err error) {

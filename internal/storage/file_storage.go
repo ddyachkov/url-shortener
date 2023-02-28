@@ -72,8 +72,7 @@ func (s URLFileStorage) GetData(ctx context.Context, dataID int) (url string, er
 }
 
 func (s URLFileStorage) CheckUser(ctx context.Context, searchID int) (foundID int, err error) {
-	_, exists := s.users[searchID]
-	if exists {
+	if _, exists := s.users[searchID]; exists {
 		return searchID, nil
 	}
 	return s.MakeNewUser(ctx)

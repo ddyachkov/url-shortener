@@ -64,6 +64,7 @@ func (h handler) ReturnTextShortURL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if userID != gotUserID {
+		userID = gotUserID
 		err = cookie.WriteEncryptedValue(w, "user_id", strconv.Itoa(gotUserID), []byte(h.config.SecretKey))
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -118,6 +119,7 @@ func (h handler) ReturnJSONShortURL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if userID != gotUserID {
+		userID = gotUserID
 		err = cookie.WriteEncryptedValue(w, "user_id", strconv.Itoa(gotUserID), []byte(h.config.SecretKey))
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -180,7 +182,8 @@ func (h handler) ReturnBatchJSONShortURL(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	if userID != gotUserID {
-		err = cookie.WriteEncryptedValue(w, "user_id", strconv.Itoa(gotUserID), []byte(h.config.SecretKey))
+		userID = gotUserID
+		err = cookie.WriteEncryptedValue(w, "user_id", strconv.Itoa(userID), []byte(h.config.SecretKey))
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
