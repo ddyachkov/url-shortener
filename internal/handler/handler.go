@@ -7,16 +7,22 @@ import (
 	"log"
 	"net/http"
 	"net/url"
-	"strconv"
 
 	"github.com/ddyachkov/url-shortener/internal/app"
 	"github.com/ddyachkov/url-shortener/internal/config"
-	"github.com/ddyachkov/url-shortener/internal/cookie"
 	"github.com/ddyachkov/url-shortener/internal/middleware"
 	"github.com/ddyachkov/url-shortener/internal/storage"
 	"github.com/go-chi/chi"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
+
+type contextKey string
+
+func (c contextKey) String() string {
+	return string(c)
+}
+
+const contextUserIDKey contextKey = "user_id"
 
 type handler struct {
 	service *app.URLShortener
@@ -35,12 +41,18 @@ func NewURLHandler(shortener *app.URLShortener, cfg *config.ServerConfig, dbpool
 
 	router.Use(middleware.Decompress, middleware.Compress)
 
-	router.Post("/", h.ReturnTextShortURL)
-	router.Post("/api/shorten", h.ReturnJSONShortURL)
-	router.Post("/api/shorten/batch", h.ReturnBatchJSONShortURL)
+	router.Group(func(router chi.Router) {
+		router.Use(h.GetEncryptedUserID)
+		router.Get("/api/user/urls", h.GetUserURL)
+		router.Group(func(router chi.Router) {
+			router.Use(h.SetEncryptedUserID)
+			router.Post("/", h.ReturnTextShortURL)
+			router.Post("/api/shorten", h.ReturnJSONShortURL)
+			router.Post("/api/shorten/batch", h.ReturnBatchJSONShortURL)
+		})
+	})
 
 	router.Get("/{URI}", h.RedirectToFullURL)
-	router.Get("/api/user/urls", h.GetUserURL)
 	router.Get("/ping", h.PingDatabase)
 
 	return router
@@ -53,24 +65,7 @@ func (h handler) ReturnTextShortURL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userID, err := getUserID(r, []byte(h.config.SecretKey))
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	gotUserID, err := h.service.GetUser(r.Context(), userID)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	if userID != gotUserID {
-		userID = gotUserID
-		err = cookie.WriteEncryptedValue(w, "user_id", strconv.Itoa(gotUserID), []byte(h.config.SecretKey))
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-	}
+	userID := r.Context().Value(contextUserIDKey).(int)
 
 	httpStatus := http.StatusCreated
 	uri, err := h.service.ReturnURI(r.Context(), string(body), userID)
@@ -108,24 +103,7 @@ func (h handler) ReturnJSONShortURL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userID, err := getUserID(r, []byte(h.config.SecretKey))
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	gotUserID, err := h.service.GetUser(r.Context(), userID)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	if userID != gotUserID {
-		userID = gotUserID
-		err = cookie.WriteEncryptedValue(w, "user_id", strconv.Itoa(gotUserID), []byte(h.config.SecretKey))
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-	}
+	userID := r.Context().Value(contextUserIDKey).(int)
 
 	httpStatus := http.StatusCreated
 	uri, err := h.service.ReturnURI(r.Context(), requestBody.URL, userID)
@@ -171,24 +149,7 @@ func (h handler) ReturnBatchJSONShortURL(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	userID, err := getUserID(r, []byte(h.config.SecretKey))
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	gotUserID, err := h.service.GetUser(r.Context(), userID)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	if userID != gotUserID {
-		userID = gotUserID
-		err = cookie.WriteEncryptedValue(w, "user_id", strconv.Itoa(userID), []byte(h.config.SecretKey))
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-	}
+	userID := r.Context().Value(contextUserIDKey).(int)
 
 	batchURL := make([]string, 0)
 	for i := range batchData {
@@ -239,15 +200,9 @@ func (h handler) RedirectToFullURL(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h handler) GetUserURL(w http.ResponseWriter, r *http.Request) {
-	userID, err := getUserID(r, []byte(h.config.SecretKey))
-	if err != nil {
-		switch {
-		case errors.Is(err, http.ErrNoCookie):
-			http.Error(w, "[]", http.StatusNoContent)
-		default:
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-		}
-		return
+	userID := r.Context().Value(contextUserIDKey).(int)
+	if userID == 0 {
+		http.Error(w, "[]", http.StatusNoContent)
 	}
 
 	responceBody, err := h.service.GetURLByUser(r.Context(), userID)
@@ -299,18 +254,4 @@ func (h handler) PingDatabase(w http.ResponseWriter, r *http.Request) {
 func writeResponse(w http.ResponseWriter, text []byte, code int) {
 	w.WriteHeader(code)
 	w.Write(text)
-}
-
-func getUserID(r *http.Request, secretKey []byte) (userID int, err error) {
-	cookieValue, err := cookie.GetEncryptedValue(r, "user_id", []byte(secretKey))
-	if err != nil {
-		return 0, nil
-	}
-
-	userID, err = strconv.Atoi(cookieValue)
-	if err != nil {
-		return 0, nil
-	}
-
-	return userID, nil
 }
