@@ -13,22 +13,46 @@ import (
 	"github.com/ddyachkov/url-shortener/internal/config"
 	"github.com/ddyachkov/url-shortener/internal/handler"
 	"github.com/ddyachkov/url-shortener/internal/storage"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 func main() {
 	flag.Parse()
-	cfg := config.NewServerConfig()
-	log.Printf("config: %+v\n", cfg)
+	cfg := config.DefaultServerConfig()
+	log.Printf("config: %+v\n", *cfg)
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, os.Interrupt)
 
-	storage := storage.NewURLFileStorage(&cfg)
-	storage.LoadData()
+	var dbpool *pgxpool.Pool
+	var urlStorage storage.URLStorage
+	switch {
+	case cfg.DatabaseDsn != "":
+		var err error
 
-	service := app.NewURLShortener(&storage)
+		dbCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		dbpool, err = pgxpool.New(dbCtx, cfg.DatabaseDsn)
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer dbpool.Close()
+
+		urlStorage, err = storage.NewURLDBStorage(dbpool, dbCtx)
+		if err != nil {
+			log.Fatalln(err.Error())
+		}
+	case cfg.FileStoragePath != "":
+		urlStorage = storage.NewURLFileStorage(cfg)
+	default:
+		urlStorage = storage.NewURLMemStorage()
+
+	}
+	service := app.NewURLShortener(urlStorage)
+
 	server := http.Server{
 		Addr:    cfg.ServerAddress,
-		Handler: handler.NewURLHandler(&service, &cfg),
+		Handler: handler.NewURLHandler(service, cfg, dbpool),
 	}
 
 	go func() {
@@ -40,9 +64,9 @@ func main() {
 
 	<-quit
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	srvCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	if err := server.Shutdown(ctx); err != nil {
+	if err := server.Shutdown(srvCtx); err != nil {
 		log.Fatal(err)
 	}
 	log.Println("server stopped")

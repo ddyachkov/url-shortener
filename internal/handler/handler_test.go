@@ -15,12 +15,17 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var cfg config.ServerConfig = config.ServerConfig{ServerAddress: "localhost:8080", BaseURL: "http://localhost:8080", FileStoragePath: "/tmp/data.txt"}
+var cfg = config.ServerConfig{
+	ServerAddress:   "localhost:8080",
+	BaseURL:         "http://localhost:8080",
+	FileStoragePath: "/tmp/data.txt",
+	SecretKey:       "thisisthirtytwobytelongsecretkey",
+}
 
 func TestURLHandler_ServeHTTP(t *testing.T) {
-	storage := storage.NewURLStorage()
-	shortener := app.NewURLShortener(&storage)
-	handler := NewURLHandler(&shortener, &cfg)
+	storage := storage.NewURLMemStorage()
+	service := app.NewURLShortener(storage)
+	handler := NewURLHandler(service, &cfg, nil)
 	type header struct {
 		contentType string
 		location    string
@@ -49,6 +54,16 @@ func TestURLHandler_ServeHTTP(t *testing.T) {
 			},
 		},
 		{
+			name:   "Negative_POST_Text_Code409",
+			method: http.MethodPost,
+			path:   "/",
+			body:   "https://www.google.ru",
+			want: want{
+				code: http.StatusConflict,
+				text: cfg.BaseURL + "/b",
+			},
+		},
+		{
 			name:   "Negative_POST_Text_Code400",
 			method: http.MethodPost,
 			path:   "/",
@@ -65,9 +80,22 @@ func TestURLHandler_ServeHTTP(t *testing.T) {
 			name:   "Positive_POST_JSON_Code201",
 			method: http.MethodPost,
 			path:   "/api/shorten",
-			body:   "{\"URL\":\"https://www.google.ru\"}",
+			body:   "{\"URL\":\"https://www.google.com\"}",
 			want: want{
 				code: http.StatusCreated,
+				text: "{\"result\":\"" + cfg.BaseURL + "/c\"}",
+				header: header{
+					contentType: "application/json",
+				},
+			},
+		},
+		{
+			name:   "Negative_POST_JSON_Code409",
+			method: http.MethodPost,
+			path:   "/api/shorten",
+			body:   "{\"URL\":\"https://www.google.ru\"}",
+			want: want{
+				code: http.StatusConflict,
 				text: "{\"result\":\"" + cfg.BaseURL + "/b\"}",
 				header: header{
 					contentType: "application/json",
@@ -103,7 +131,7 @@ func TestURLHandler_ServeHTTP(t *testing.T) {
 		{
 			name:   "Negative_GET_Code400",
 			method: http.MethodGet,
-			path:   "/c",
+			path:   "/d",
 			want: want{
 				code: http.StatusNotFound,
 				text: "URL not found\n",
@@ -135,12 +163,12 @@ func TestURLHandler_ServeHTTP(t *testing.T) {
 
 func TestURLHandler_ServeHTTP_WithFileStorage(t *testing.T) {
 	storage := storage.NewURLFileStorage(&cfg)
-	storage.LoadData()
+
 	t.Cleanup(func() {
 		_ = os.Remove(cfg.FileStoragePath)
 	})
-	shortener := app.NewURLShortener(&storage)
-	handler := NewURLHandler(&shortener, &cfg)
+	service := app.NewURLShortener(storage)
+	handler := NewURLHandler(service, &cfg, nil)
 	type header struct {
 		contentType string
 		location    string
@@ -169,6 +197,16 @@ func TestURLHandler_ServeHTTP_WithFileStorage(t *testing.T) {
 			},
 		},
 		{
+			name:   "Negative_POST_Text_Code409",
+			method: http.MethodPost,
+			path:   "/",
+			body:   "https://www.google.ru",
+			want: want{
+				code: http.StatusConflict,
+				text: cfg.BaseURL + "/b",
+			},
+		},
+		{
 			name:   "Negative_POST_Text_Code400",
 			method: http.MethodPost,
 			path:   "/",
@@ -185,9 +223,22 @@ func TestURLHandler_ServeHTTP_WithFileStorage(t *testing.T) {
 			name:   "Positive_POST_JSON_Code201",
 			method: http.MethodPost,
 			path:   "/api/shorten",
-			body:   "{\"URL\":\"https://www.google.ru\"}",
+			body:   "{\"URL\":\"https://www.google.com\"}",
 			want: want{
 				code: http.StatusCreated,
+				text: "{\"result\":\"" + cfg.BaseURL + "/c\"}",
+				header: header{
+					contentType: "application/json",
+				},
+			},
+		},
+		{
+			name:   "Negative_POST_JSON_Code409",
+			method: http.MethodPost,
+			path:   "/api/shorten",
+			body:   "{\"URL\":\"https://www.google.ru\"}",
+			want: want{
+				code: http.StatusConflict,
 				text: "{\"result\":\"" + cfg.BaseURL + "/b\"}",
 				header: header{
 					contentType: "application/json",
@@ -223,7 +274,7 @@ func TestURLHandler_ServeHTTP_WithFileStorage(t *testing.T) {
 		{
 			name:   "Negative_GET_Code400",
 			method: http.MethodGet,
-			path:   "/c",
+			path:   "/d",
 			want: want{
 				code: http.StatusNotFound,
 				text: "URL not found\n",

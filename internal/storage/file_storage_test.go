@@ -1,14 +1,20 @@
 package storage
 
 import (
+	"context"
+	"os"
 	"testing"
 
 	"github.com/ddyachkov/url-shortener/internal/config"
 	"github.com/stretchr/testify/assert"
 )
 
+var cfg config.ServerConfig = config.ServerConfig{FileStoragePath: "/tmp/data.txt"}
+
 func TestURLFileStorage_WriteData(t *testing.T) {
-	cfg := config.NewServerConfig()
+	t.Cleanup(func() {
+		_ = os.Remove(cfg.FileStoragePath)
+	})
 	storage := NewURLFileStorage(&cfg)
 	type args struct {
 		url string
@@ -26,15 +32,15 @@ func TestURLFileStorage_WriteData(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:    "Positive_SameData",
+			name:    "Negative_SameData",
 			args:    args{url: "https://www.google.ru"},
 			wantID:  1,
-			wantErr: false,
+			wantErr: true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotID, err := storage.WriteData(tt.args.url)
+			gotID, err := storage.WriteData(context.Background(), tt.args.url, 1)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("URLFileStorage.GetData() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -45,10 +51,12 @@ func TestURLFileStorage_WriteData(t *testing.T) {
 }
 
 func TestURLFileStorage_GetData(t *testing.T) {
-	cfg := config.NewServerConfig()
+	t.Cleanup(func() {
+		_ = os.Remove(cfg.FileStoragePath)
+	})
 	storage := NewURLFileStorage(&cfg)
 	url := "https://www.google.ru"
-	gotID, err := storage.WriteData(url)
+	gotID, err := storage.WriteData(context.Background(), url, 1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -76,7 +84,7 @@ func TestURLFileStorage_GetData(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotURL, err := storage.GetData(tt.args.id)
+			gotURL, err := storage.GetData(context.Background(), tt.args.id)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("URLFileStorage.GetData() error = %v, wantErr %v", err, tt.wantErr)
 				return
