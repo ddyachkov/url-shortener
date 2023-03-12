@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"io"
@@ -44,6 +45,7 @@ func NewURLHandler(shortener *app.URLShortener, cfg *config.ServerConfig, dbpool
 	router.Group(func(router chi.Router) {
 		router.Use(h.GetEncryptedUserID)
 		router.Get("/api/user/urls", h.GetUserURL)
+		router.Delete("/api/user/urls", h.DeleteUserURL)
 		router.Group(func(router chi.Router) {
 			router.Use(h.SetEncryptedUserID)
 			router.Post("/", h.ReturnTextShortURL)
@@ -185,7 +187,12 @@ func (h handler) RedirectToFullURL(w http.ResponseWriter, r *http.Request) {
 	uri := chi.URLParam(r, "URI")
 	fullURL, err := h.service.GetFullURL(r.Context(), uri)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
+		switch err {
+		case storage.ErrURLNotFound:
+			http.Error(w, err.Error(), http.StatusNotFound)
+		case storage.ErrURLIsDeleted:
+			http.Error(w, err.Error(), http.StatusGone)
+		}
 		return
 	}
 
@@ -234,6 +241,28 @@ func (h handler) GetUserURL(w http.ResponseWriter, r *http.Request) {
 	log.Println("GetUserURL:", userID)
 	w.Header().Set("Content-Type", "application/json")
 	writeResponse(w, responce, http.StatusOK)
+}
+
+func (h handler) DeleteUserURL(w http.ResponseWriter, r *http.Request) {
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	var uriList []string
+	err = json.Unmarshal(body, &uriList)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	userID := r.Context().Value(contextUserIDKey).(int)
+
+	go func() {
+		h.service.DeleteUserURL(context.Background(), uriList, userID)
+	}()
+	writeResponse(w, []byte("Accepted"), http.StatusAccepted)
 }
 
 func (h handler) PingDatabase(w http.ResponseWriter, r *http.Request) {

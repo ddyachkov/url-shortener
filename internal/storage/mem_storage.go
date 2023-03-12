@@ -54,6 +54,9 @@ func (s URLMemStorage) GetData(ctx context.Context, dataID int) (url string, err
 	if !ok {
 		return "", ErrURLNotFound
 	}
+	if url == "" {
+		return "", ErrURLIsDeleted
+	}
 	return url, nil
 }
 
@@ -71,4 +74,23 @@ func (s URLMemStorage) CheckUser(ctx context.Context, searchID int) (foundID int
 
 func (s URLMemStorage) GetUserURL(ctx context.Context, userID int) (urlData []URLData, err error) {
 	return s.users[userID], nil
+}
+
+func (s URLMemStorage) DeleteBatchData(ctx context.Context, batchID []int, userID int) {
+	for _, id := range batchID {
+		urlData := s.users[userID]
+		found := false
+		for _, data := range urlData {
+			if data.ID == id {
+				found = true
+				break
+			}
+		}
+		if !found {
+			continue
+		}
+		url := s.urls[id]
+		s.urls[id] = ""
+		delete(s.ids, url)
+	}
 }

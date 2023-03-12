@@ -81,6 +81,14 @@ func (sh URLShortener) GetURLByUser(ctx context.Context, userID int) (urlData []
 	return urlData, nil
 }
 
+func (sh URLShortener) DeleteUserURL(ctx context.Context, uriList []string, userID int) {
+	idList := make([]int, len(uriList))
+	for i, uri := range uriList {
+		idList[i] = makeID(uri)
+	}
+	sh.storage.DeleteBatchData(ctx, idList, userID)
+}
+
 // makeURI returns URI from data ID
 func makeURI(id int) (uri string) {
 	const characters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"

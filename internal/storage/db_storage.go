@@ -74,9 +74,14 @@ func (s URLDBStorage) WriteBatchData(ctx context.Context, batchURL []string, use
 }
 
 func (s URLDBStorage) GetData(ctx context.Context, dataID int) (url string, err error) {
-	err = s.db.QueryRow(ctx, "SELECT ud.url FROM public.url_data ud WHERE ud.id = $1", dataID).Scan(&url)
+	var deleted bool
+	err = s.db.QueryRow(ctx, "SELECT ud.url, ud.deleted FROM public.url_data ud WHERE ud.id = $1", dataID).Scan(&url, &deleted)
 	if err != nil {
 		return "", ErrURLNotFound
+	}
+
+	if deleted {
+		return "", ErrURLIsDeleted
 	}
 
 	return url, nil
@@ -131,18 +136,34 @@ func (s URLDBStorage) GetUserURL(ctx context.Context, userID int) (urlData []URL
 	return urlData, nil
 }
 
+func (s URLDBStorage) DeleteBatchData(ctx context.Context, batchID []int, userID int) {
+	query := `UPDATE public.url_data SET deleted = true WHERE id = @id and user_id = @userID`
+
+	batch := &pgx.Batch{}
+	for i := range batchID {
+		args := pgx.NamedArgs{
+			"id":     batchID[i],
+			"userID": userID,
+		}
+		batch.Queue(query, args)
+	}
+
+	results := s.db.SendBatch(ctx, batch)
+	results.Close()
+}
+
 func (s URLDBStorage) Prepare(ctx context.Context) (err error) {
 	_, err = s.db.Exec(ctx, "CREATE TABLE IF NOT EXISTS public.user (id SERIAL PRIMARY KEY)")
 	if err != nil {
 		return err
 	}
 
-	_, err = s.db.Exec(ctx, "CREATE TABLE IF NOT EXISTS public.url_data (id SERIAL PRIMARY KEY, url text UNIQUE NOT NULL, user_id integer REFERENCES public.user (id) NOT NULL)")
+	_, err = s.db.Exec(ctx, "CREATE TABLE IF NOT EXISTS public.url_data (id SERIAL PRIMARY KEY, url TEXT UNIQUE NOT NULL, user_id INTEGER REFERENCES public.user (id) NOT NULL, deleted BOOLEAN DEFAULT FALSE)")
 	if err != nil {
 		return err
 	}
 
-	_, err = s.db.Exec(ctx, "CREATE INDEX IF NOT EXISTS idx_ud_user_id on public.url_data(user_id)")
+	_, err = s.db.Exec(ctx, "CREATE INDEX IF NOT EXISTS idx_ud_user_id ON public.url_data(user_id)")
 	if err != nil {
 		return err
 	}
