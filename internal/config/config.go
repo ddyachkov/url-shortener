@@ -15,6 +15,7 @@ var (
 	secretKey       string
 )
 
+// ServerConfig contains server configuration.
 type ServerConfig struct {
 	ServerAddress   string `env:"SERVER_ADDRESS"`
 	BaseURL         string `env:"BASE_URL"`
@@ -23,6 +24,7 @@ type ServerConfig struct {
 	SecretKey       string `env:"SECRET_KEY"`
 }
 
+// DefaultServerConfig returns ServerConfig object with values saved from env and flags.
 func DefaultServerConfig() *ServerConfig {
 	cfg := &ServerConfig{
 		ServerAddress:   serverAddress,

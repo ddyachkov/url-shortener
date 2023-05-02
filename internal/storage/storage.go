@@ -1,3 +1,4 @@
+// Package storage provides functionality to store and receive URL and user data
 package storage
 
 import (
@@ -5,20 +6,24 @@ import (
 	"errors"
 )
 
-var ErrURLNotFound = errors.New("URL not found")
-var ErrWriteDataConflict = errors.New("write data conflict")
-var ErrURLIsDeleted = errors.New("URL is deleted")
+// Errors
+var (
+	ErrURLNotFound       = errors.New("URL not found")
+	ErrWriteDataConflict = errors.New("write data conflict")
+	ErrURLIsDeleted      = errors.New("URL is deleted")
+)
 
+// URLStorage describes interface to store and receive URL and user data
 type URLStorage interface {
 	WriteData(context.Context, string, int) (int, error)
 	WriteBatchData(context.Context, []string, int) ([]int, error)
 	GetData(context.Context, int) (string, error)
 	CheckUser(context.Context, int) (int, error)
-	MakeNewUser(context.Context) (int, error)
 	GetUserURL(context.Context, int) ([]URLData, error)
 	DeleteBatchData(context.Context, []int, int)
 }
 
+// URLStorage saves URL data
 type URLData struct {
 	ID          int    `json:"-"`
 	URI         string `json:"-"`

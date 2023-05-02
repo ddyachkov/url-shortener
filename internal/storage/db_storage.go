@@ -10,10 +10,12 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+// URLDBStorage stores pointer to pg connection pool object.
 type URLDBStorage struct {
 	db *pgxpool.Pool
 }
 
+// NewURLDBStorage returns a new URLDBStorage object.
 func NewURLDBStorage(dbpool *pgxpool.Pool, ctx context.Context) (storage *URLDBStorage, err error) {
 	storage = &URLDBStorage{
 		db: dbpool,
@@ -27,8 +29,8 @@ func NewURLDBStorage(dbpool *pgxpool.Pool, ctx context.Context) (storage *URLDBS
 	return storage, nil
 }
 
+// WriteData writes URL data to storage and returns new data id.
 func (s URLDBStorage) WriteData(ctx context.Context, url string, userID int) (dataID int, err error) {
-
 	err = s.db.QueryRow(ctx, "INSERT INTO public.url_data (url, user_id) VALUES ($1, $2) RETURNING id", url, userID).Scan(&dataID)
 	if err != nil {
 		var pgErr *pgconn.PgError
@@ -45,6 +47,7 @@ func (s URLDBStorage) WriteData(ctx context.Context, url string, userID int) (da
 	return dataID, nil
 }
 
+// WriteData writes batch of URLs data to storage and returns new data ids.
 func (s URLDBStorage) WriteBatchData(ctx context.Context, batchURL []string, userID int) (batchID []int, err error) {
 	query := `INSERT INTO public.url_data (url, user_id) VALUES (@url, @userID) RETURNING id`
 
@@ -73,6 +76,7 @@ func (s URLDBStorage) WriteBatchData(ctx context.Context, batchURL []string, use
 	return batchID, nil
 }
 
+// GetData returns URL data by data id.
 func (s URLDBStorage) GetData(ctx context.Context, dataID int) (url string, err error) {
 	var deleted bool
 	err = s.db.QueryRow(ctx, "SELECT ud.url, ud.deleted FROM public.url_data ud WHERE ud.id = $1", dataID).Scan(&url, &deleted)
@@ -87,6 +91,7 @@ func (s URLDBStorage) GetData(ctx context.Context, dataID int) (url string, err 
 	return url, nil
 }
 
+// CheckUser receives searchID and checks if user is already exists. Returns same id for existing user or new id for new user.
 func (s URLDBStorage) CheckUser(ctx context.Context, searchID int) (foundID int, err error) {
 	var exists bool
 	err = s.db.QueryRow(ctx, "SELECT EXISTS (SELECT 1 FROM public.user u WHERE u.id = $1)", searchID).Scan(&exists)
@@ -98,18 +103,10 @@ func (s URLDBStorage) CheckUser(ctx context.Context, searchID int) (foundID int,
 		return searchID, nil
 	}
 
-	return s.MakeNewUser(ctx)
+	return s.makeNewUser(ctx)
 }
 
-func (s URLDBStorage) MakeNewUser(ctx context.Context) (userID int, err error) {
-	err = s.db.QueryRow(ctx, "INSERT INTO public.user DEFAULT VALUES RETURNING id").Scan(&userID)
-	if err != nil {
-		return 0, err
-	}
-
-	return userID, nil
-}
-
+// GetUserURL returns batch of URL data by user id.
 func (s URLDBStorage) GetUserURL(ctx context.Context, userID int) (urlData []URLData, err error) {
 	rows, err := s.db.Query(ctx, "SELECT ud.id, ud.url FROM public.url_data ud WHERE ud.user_id = $1", userID)
 	if err != nil {
@@ -136,6 +133,7 @@ func (s URLDBStorage) GetUserURL(ctx context.Context, userID int) (urlData []URL
 	return urlData, nil
 }
 
+// DeleteBatchData deletes batch of URL data by user id.
 func (s URLDBStorage) DeleteBatchData(ctx context.Context, batchID []int, userID int) {
 	query := `UPDATE public.url_data SET deleted = true WHERE id = @id and user_id = @userID`
 
@@ -152,6 +150,7 @@ func (s URLDBStorage) DeleteBatchData(ctx context.Context, batchID []int, userID
 	results.Close()
 }
 
+// Prepare prepares db storage to work with.
 func (s URLDBStorage) Prepare(ctx context.Context) (err error) {
 	_, err = s.db.Exec(ctx, "CREATE TABLE IF NOT EXISTS public.user (id SERIAL PRIMARY KEY)")
 	if err != nil {
@@ -169,4 +168,13 @@ func (s URLDBStorage) Prepare(ctx context.Context) (err error) {
 	}
 
 	return nil
+}
+
+func (s URLDBStorage) makeNewUser(ctx context.Context) (userID int, err error) {
+	err = s.db.QueryRow(ctx, "INSERT INTO public.user DEFAULT VALUES RETURNING id").Scan(&userID)
+	if err != nil {
+		return 0, err
+	}
+
+	return userID, nil
 }
