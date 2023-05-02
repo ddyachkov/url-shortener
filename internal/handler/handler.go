@@ -9,6 +9,8 @@ import (
 	"net/http"
 	"net/url"
 
+	_ "net/http/pprof"
+
 	"github.com/ddyachkov/url-shortener/internal/app"
 	"github.com/ddyachkov/url-shortener/internal/config"
 	"github.com/ddyachkov/url-shortener/internal/middleware"
@@ -40,10 +42,8 @@ func NewURLHandler(shortener *app.URLShortener, cfg *config.ServerConfig, dbpool
 		db:      dbpool,
 	}
 
-	router.Use(middleware.Decompress, middleware.Compress)
-
 	router.Group(func(router chi.Router) {
-		router.Use(h.GetEncryptedUserID)
+		router.Use(middleware.Decompress, middleware.Compress, h.GetEncryptedUserID)
 		router.Get("/api/user/urls", h.GetUserURL)
 		router.Delete("/api/user/urls", h.DeleteUserURL)
 		router.Group(func(router chi.Router) {
@@ -56,6 +56,11 @@ func NewURLHandler(shortener *app.URLShortener, cfg *config.ServerConfig, dbpool
 
 	router.Get("/{URI}", h.RedirectToFullURL)
 	router.Get("/ping", h.PingDatabase)
+
+	router.Route("/debug/pprof", func(router chi.Router) {
+		router.Handle("/", http.DefaultServeMux)
+		router.Handle("/{cmd}", http.DefaultServeMux)
+	})
 
 	return router
 }
