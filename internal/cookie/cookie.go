@@ -1,3 +1,4 @@
+// Package cookie reads and writes encrypted cookie values.
 package cookie
 
 import (
@@ -13,11 +14,13 @@ import (
 	"strings"
 )
 
+// Errors
 var (
 	ErrValueTooLong = errors.New("cookie value too long")
 	ErrInvalidValue = errors.New("invalid cookie value")
 )
 
+// GetEncryptedValue returns decrypted value from received cookie.
 func GetEncryptedValue(r *http.Request, name string, secretKey []byte) (value string, err error) {
 	cookie, err := r.Cookie(name)
 	if err != nil {
@@ -64,6 +67,7 @@ func GetEncryptedValue(r *http.Request, name string, secretKey []byte) (value st
 	return value, nil
 }
 
+// GetEncryptedValue writes encrypted value to a certain cookie.
 func WriteEncryptedValue(w http.ResponseWriter, name string, value string, secretKey []byte) (err error) {
 	block, err := aes.NewCipher(secretKey)
 	if err != nil {

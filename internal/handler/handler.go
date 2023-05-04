@@ -1,3 +1,4 @@
+// Package handler provides endpoints for url shortener server
 package handler
 
 import (
@@ -9,6 +10,8 @@ import (
 	"net/http"
 	"net/url"
 
+	_ "net/http/pprof"
+
 	"github.com/ddyachkov/url-shortener/internal/app"
 	"github.com/ddyachkov/url-shortener/internal/config"
 	"github.com/ddyachkov/url-shortener/internal/middleware"
@@ -19,6 +22,7 @@ import (
 
 type contextKey string
 
+// String implements Stringer interface for contextKey type.
 func (c contextKey) String() string {
 	return string(c)
 }
@@ -31,6 +35,7 @@ type handler struct {
 	db      *pgxpool.Pool
 }
 
+// NewURLHandler returns http.Handler with url shortener endpoints.
 func NewURLHandler(shortener *app.URLShortener, cfg *config.ServerConfig, dbpool *pgxpool.Pool) http.Handler {
 	router := chi.NewRouter()
 
@@ -40,10 +45,8 @@ func NewURLHandler(shortener *app.URLShortener, cfg *config.ServerConfig, dbpool
 		db:      dbpool,
 	}
 
-	router.Use(middleware.Decompress, middleware.Compress)
-
 	router.Group(func(router chi.Router) {
-		router.Use(h.GetEncryptedUserID)
+		router.Use(middleware.Decompress, middleware.Compress, h.GetEncryptedUserID)
 		router.Get("/api/user/urls", h.GetUserURL)
 		router.Delete("/api/user/urls", h.DeleteUserURL)
 		router.Group(func(router chi.Router) {
@@ -57,9 +60,15 @@ func NewURLHandler(shortener *app.URLShortener, cfg *config.ServerConfig, dbpool
 	router.Get("/{URI}", h.RedirectToFullURL)
 	router.Get("/ping", h.PingDatabase)
 
+	router.Route("/debug/pprof", func(router chi.Router) {
+		router.Handle("/", http.DefaultServeMux)
+		router.Handle("/{cmd}", http.DefaultServeMux)
+	})
+
 	return router
 }
 
+// ReturnTextShortURL returns response with short URL for request with URL in simple text body.
 func (h handler) ReturnTextShortURL(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -90,6 +99,7 @@ func (h handler) ReturnTextShortURL(w http.ResponseWriter, r *http.Request) {
 	writeResponse(w, []byte(shortURL), httpStatus)
 }
 
+// ReturnJSONShortURL returns response with short URL for request with URL in JSON body.
 func (h handler) ReturnJSONShortURL(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -138,6 +148,7 @@ func (h handler) ReturnJSONShortURL(w http.ResponseWriter, r *http.Request) {
 	writeResponse(w, responce, httpStatus)
 }
 
+// ReturnJSONShortURL returns response with batch of short URLs for request with URLs in JSON body.
 func (h handler) ReturnBatchJSONShortURL(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -183,6 +194,7 @@ func (h handler) ReturnBatchJSONShortURL(w http.ResponseWriter, r *http.Request)
 	writeResponse(w, responce, http.StatusCreated)
 }
 
+// RedirectToFullURL returns redirect from short URL to full URL.
 func (h handler) RedirectToFullURL(w http.ResponseWriter, r *http.Request) {
 	uri := chi.URLParam(r, "URI")
 	fullURL, err := h.service.GetFullURL(r.Context(), uri)
@@ -206,6 +218,7 @@ func (h handler) RedirectToFullURL(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, fullURL, http.StatusTemporaryRedirect)
 }
 
+// GetUserURL returns batch of URLs shortened by user.
 func (h handler) GetUserURL(w http.ResponseWriter, r *http.Request) {
 	userID := r.Context().Value(contextUserIDKey).(int)
 	if userID == 0 {
@@ -243,6 +256,7 @@ func (h handler) GetUserURL(w http.ResponseWriter, r *http.Request) {
 	writeResponse(w, responce, http.StatusOK)
 }
 
+// DeleteUserURL deletes batch of URLs shortened by user.
 func (h handler) DeleteUserURL(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -265,6 +279,7 @@ func (h handler) DeleteUserURL(w http.ResponseWriter, r *http.Request) {
 	writeResponse(w, []byte("Accepted"), http.StatusAccepted)
 }
 
+// PingDatabase provides "ping DB" functionality.
 func (h handler) PingDatabase(w http.ResponseWriter, r *http.Request) {
 	if h.db == nil {
 		http.Error(w, "", http.StatusInternalServerError)

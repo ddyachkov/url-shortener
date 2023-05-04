@@ -1,3 +1,4 @@
+// Package middleware provides compress and decompress middlewares
 package middleware
 
 import (
@@ -12,10 +13,12 @@ type gzipWriter struct {
 	Writer io.Writer
 }
 
+// Write implements io.Writer interface for gzipWriter struct.
 func (w gzipWriter) Write(b []byte) (int, error) {
 	return w.Writer.Write(b)
 }
 
+// Decompress passes to handler gzip-decompressed body.
 func Decompress(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if strings.Contains(r.Header.Get("Content-Encoding"), "gzip") {
@@ -31,6 +34,7 @@ func Decompress(next http.Handler) http.Handler {
 	})
 }
 
+// Compress returns to client gzip-compressed body.
 func Compress(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if !strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {

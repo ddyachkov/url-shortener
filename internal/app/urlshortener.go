@@ -1,3 +1,4 @@
+// Package app implements url shortener logic
 package app
 
 import (
@@ -7,11 +8,12 @@ import (
 	"github.com/ddyachkov/url-shortener/internal/storage"
 )
 
+// URLShortener is a middleware between handler and storage
 type URLShortener struct {
-	storage storage.URLStorage // URL storage
+	storage storage.URLStorage
 }
 
-// NewURLShortener() returns a new URLShortener object.
+// NewURLShortener returns a new URLShortener object.
 func NewURLShortener(st storage.URLStorage) *URLShortener {
 	return &URLShortener{
 		storage: st,
@@ -33,6 +35,7 @@ func (sh *URLShortener) ReturnURI(ctx context.Context, fullURL string, userID in
 	return makeURI(id), err
 }
 
+// ReturnBatchURI returns batch of URIs for received batch of URLs. If any URL is invalid then returns error.
 func (sh *URLShortener) ReturnBatchURI(ctx context.Context, batchURL []string, userID int) (batchURI []string, err error) {
 	for i := range batchURL {
 		_, err = url.ParseRequestURI(batchURL[i])
@@ -64,10 +67,12 @@ func (sh *URLShortener) GetFullURL(ctx context.Context, uri string) (fullURL str
 	return fullURL, nil
 }
 
+// GetUser receives searchID and checks if user is already exists. Returns same id for existing user or new id for new user.
 func (sh URLShortener) GetUser(ctx context.Context, searchID int) (foundID int, err error) {
 	return sh.storage.CheckUser(ctx, searchID)
 }
 
+// GetURLByUser returns all URLs shortened by user.
 func (sh URLShortener) GetURLByUser(ctx context.Context, userID int) (urlData []storage.URLData, err error) {
 	urlData, err = sh.storage.GetUserURL(ctx, userID)
 	if err != nil {
@@ -81,6 +86,7 @@ func (sh URLShortener) GetURLByUser(ctx context.Context, userID int) (urlData []
 	return urlData, nil
 }
 
+// DeleteUserURL deletes batch of URLs shortened by user.
 func (sh URLShortener) DeleteUserURL(ctx context.Context, uriList []string, userID int) {
 	idList := make([]int, len(uriList))
 	for i, uri := range uriList {

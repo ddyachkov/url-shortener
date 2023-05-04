@@ -11,6 +11,7 @@ import (
 	"github.com/ddyachkov/url-shortener/internal/config"
 )
 
+// URLFileStorage stores file storage data.
 type URLFileStorage struct {
 	config     *config.ServerConfig
 	urls       map[int]string
@@ -20,6 +21,7 @@ type URLFileStorage struct {
 	lastUserID int
 }
 
+// NewURLFileStorage returns a new URLFileStorage object.
 func NewURLFileStorage(cfg *config.ServerConfig) (storage *URLFileStorage) {
 	storage = &URLFileStorage{
 		config:     cfg,
@@ -34,6 +36,7 @@ func NewURLFileStorage(cfg *config.ServerConfig) (storage *URLFileStorage) {
 	return storage
 }
 
+// WriteData writes URL data to storage and returns new data id.
 func (s *URLFileStorage) WriteData(ctx context.Context, url string, userID int) (dataID int, err error) {
 	dataID, ok := s.ids[url]
 	if ok {
@@ -49,6 +52,7 @@ func (s *URLFileStorage) WriteData(ctx context.Context, url string, userID int) 
 	return dataID, nil
 }
 
+// WriteData writes batch of URLs data to storage and returns new data ids.
 func (s *URLFileStorage) WriteBatchData(ctx context.Context, batchURL []string, userID int) (batchID []int, err error) {
 	batchID = make([]int, 0)
 	for i := range batchURL {
@@ -63,6 +67,7 @@ func (s *URLFileStorage) WriteBatchData(ctx context.Context, batchURL []string, 
 	return batchID, nil
 }
 
+// GetData returns URL data by data id.
 func (s URLFileStorage) GetData(ctx context.Context, dataID int) (url string, err error) {
 	url, ok := s.urls[dataID]
 	if !ok {
@@ -74,22 +79,20 @@ func (s URLFileStorage) GetData(ctx context.Context, dataID int) (url string, er
 	return url, nil
 }
 
+// CheckUser receives searchID and checks if user is already exists. Returns same id for existing user or new id for new user.
 func (s URLFileStorage) CheckUser(ctx context.Context, searchID int) (foundID int, err error) {
 	if _, exists := s.users[searchID]; exists {
 		return searchID, nil
 	}
-	return s.MakeNewUser(ctx)
+	return s.makeNewUser(ctx)
 }
 
-func (s *URLFileStorage) MakeNewUser(ctx context.Context) (userID int, err error) {
-	s.lastUserID += 1
-	return s.lastUserID, nil
-}
-
+// GetUserURL returns batch of URL data by user id.
 func (s URLFileStorage) GetUserURL(ctx context.Context, userID int) (urlData []URLData, err error) {
 	return s.users[userID], nil
 }
 
+// DeleteBatchData deletes batch of URL data by user id.
 func (s URLFileStorage) DeleteBatchData(ctx context.Context, batchID []int, userID int) {
 	for _, id := range batchID {
 		urlData := s.users[userID]
@@ -109,6 +112,7 @@ func (s URLFileStorage) DeleteBatchData(ctx context.Context, batchID []int, user
 	}
 }
 
+// LoadData loads data from file on disk.
 func (s *URLFileStorage) LoadData() {
 	if _, err := os.Stat(s.config.FileStoragePath); os.IsNotExist(err) {
 		err := os.MkdirAll(filepath.Dir(s.config.FileStoragePath), os.ModePerm)
@@ -157,4 +161,9 @@ func (s URLFileStorage) saveData(dataID int, url string, userID int) {
 	}
 	defer file.Close()
 	fmt.Fprintf(file, "%d %s %d\n", dataID, url, userID)
+}
+
+func (s *URLFileStorage) makeNewUser(ctx context.Context) (userID int, err error) {
+	s.lastUserID += 1
+	return s.lastUserID, nil
 }

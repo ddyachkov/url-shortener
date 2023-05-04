@@ -8,6 +8,7 @@ import (
 	"github.com/ddyachkov/url-shortener/internal/cookie"
 )
 
+// GetEncryptedUserID gets user id from encrypted cookie and passes it further to handler.
 func (h handler) GetEncryptedUserID(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var userID int
@@ -26,6 +27,7 @@ func (h handler) GetEncryptedUserID(next http.Handler) http.Handler {
 	})
 }
 
+// SetEncryptedUserID sets encrypted cookie with user id to return to client.
 func (h handler) SetEncryptedUserID(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		userID := r.Context().Value(contextUserIDKey).(int)
