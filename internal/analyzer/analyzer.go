@@ -6,6 +6,7 @@ import (
 	"golang.org/x/tools/go/analysis"
 )
 
+// MainAnalyzer analyzes main function in main packages
 var MainAnalyzer = &analysis.Analyzer{
 	Name: "maincheck",
 	Doc:  "checks for main function in main package",
