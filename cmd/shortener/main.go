@@ -1,3 +1,5 @@
+//go:build linux
+
 package main
 
 import (
@@ -16,10 +18,16 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+var (
+	buildVersion = "N/A"
+	buildDate    = "N/A"
+	buildCommit  = "N/A"
+)
+
 func main() {
 	flag.Parse()
 	cfg := config.DefaultServerConfig()
-	log.Printf("config: %+v\n", *cfg)
+	log.Printf("Config: %+v\n", *cfg)
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, os.Interrupt)
 
@@ -56,7 +64,10 @@ func main() {
 	}
 
 	go func() {
-		log.Println("server starting...")
+		log.Println("Server starting...")
+		log.Println("Build version:", buildVersion)
+		log.Println("Build date:", buildDate)
+		log.Println("Build commit:", buildCommit)
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatal(err)
 		}
@@ -69,5 +80,5 @@ func main() {
 	if err := server.Shutdown(srvCtx); err != nil {
 		log.Fatal(err)
 	}
-	log.Println("server stopped")
+	log.Println("Server stopped")
 }
