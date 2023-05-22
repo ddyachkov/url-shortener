@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/ddyachkov/url-shortener/internal/app"
@@ -29,7 +30,7 @@ func main() {
 	cfg := config.DefaultServerConfig()
 	log.Printf("Config: %+v\n", *cfg)
 	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, os.Interrupt)
+	signal.Notify(quit, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
 
 	var dbpool *pgxpool.Pool
 	var urlStorage storage.URLStorage
