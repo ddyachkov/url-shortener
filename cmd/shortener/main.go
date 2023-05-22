@@ -16,6 +16,12 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+var (
+	buildVersion = "N/A"
+	buildDate    = "N/A"
+	buildCommit  = "N/A"
+)
+
 func main() {
 	flag.Parse()
 	cfg := config.DefaultServerConfig()
@@ -56,6 +62,9 @@ func main() {
 
 	go func() {
 		log.Println("server starting...")
+		log.Println("Build version:", buildVersion)
+		log.Println("Build date:", buildDate)
+		log.Println("Build commit:", buildCommit)
 		if cfg.HttpsEnabled {
 			err = server.ListenAndServeTLS("server.crt", "server.key")
 		} else {
