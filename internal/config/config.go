@@ -24,7 +24,7 @@ type ServerConfig struct {
 	DatabaseDsn     string `env:"DATABASE_DSN"`
 	FileStoragePath string `env:"FILE_STORAGE_PATH"`
 	SecretKey       string `env:"SECRET_KEY"`
-	HttpsEnabled    bool   `env:"ENABLE_HTTPS"`
+	HTTPSEnabled    bool   `env:"ENABLE_HTTPS"`
 }
 
 // DefaultServerConfig returns ServerConfig object with values saved from env and flags.
@@ -35,13 +35,13 @@ func DefaultServerConfig() *ServerConfig {
 		DatabaseDsn:     databaseDsn,
 		FileStoragePath: fileStoragePath,
 		SecretKey:       secretKey,
-		HttpsEnabled:    httpsEnabled,
+		HTTPSEnabled:    httpsEnabled,
 	}
 	if err := env.Parse(cfg); err != nil {
 		log.Fatal(err)
 	}
 
-	if cfg.HttpsEnabled {
+	if cfg.HTTPSEnabled {
 		cfg.BaseURL = strings.Replace(cfg.BaseURL, "http://", "https://", 1)
 	}
 

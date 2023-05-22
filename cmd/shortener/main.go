@@ -67,7 +67,7 @@ func main() {
 		log.Println("Build version:", buildVersion)
 		log.Println("Build date:", buildDate)
 		log.Println("Build commit:", buildCommit)
-		if cfg.HttpsEnabled {
+		if cfg.HTTPSEnabled {
 			err = server.ListenAndServeTLS("server.crt", "server.key")
 		} else {
 			err = server.ListenAndServe()
