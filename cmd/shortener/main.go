@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/ddyachkov/url-shortener/internal/app"
@@ -29,14 +30,13 @@ func main() {
 	cfg := config.DefaultServerConfig()
 	log.Printf("Config: %+v\n", *cfg)
 	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, os.Interrupt)
+	signal.Notify(quit, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
 
 	var dbpool *pgxpool.Pool
 	var urlStorage storage.URLStorage
+	var err error
 	switch {
 	case cfg.DatabaseDsn != "":
-		var err error
-
 		dbCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 
@@ -68,7 +68,13 @@ func main() {
 		log.Println("Build version:", buildVersion)
 		log.Println("Build date:", buildDate)
 		log.Println("Build commit:", buildCommit)
-		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		if cfg.HTTPSEnabled {
+			err = server.ListenAndServeTLS("server.crt", "server.key")
+		} else {
+			err = server.ListenAndServe()
+		}
+
+		if err != nil && err != http.ErrServerClosed {
 			log.Fatal(err)
 		}
 	}()
@@ -77,7 +83,7 @@ func main() {
 
 	srvCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	if err := server.Shutdown(srvCtx); err != nil {
+	if err = server.Shutdown(srvCtx); err != nil {
 		log.Fatal(err)
 	}
 	log.Println("Server stopped")
