@@ -49,11 +49,17 @@ func NewURLHandler(shortener *app.URLShortener, cfg *config.ServerConfig, dbpool
 		router.Use(middleware.Decompress, middleware.Compress, h.GetEncryptedUserID)
 		router.Get("/api/user/urls", h.GetUserURL)
 		router.Delete("/api/user/urls", h.DeleteUserURL)
+
 		router.Group(func(router chi.Router) {
 			router.Use(h.SetEncryptedUserID)
 			router.Post("/", h.ReturnTextShortURL)
 			router.Post("/api/shorten", h.ReturnJSONShortURL)
 			router.Post("/api/shorten/batch", h.ReturnBatchJSONShortURL)
+		})
+
+		router.Group(func(router chi.Router) {
+			router.Use(h.CheckSubnet)
+			router.Get("/api/internal/stats", h.GetStats)
 		})
 	})
 
@@ -277,6 +283,29 @@ func (h handler) DeleteUserURL(w http.ResponseWriter, r *http.Request) {
 		h.service.DeleteUserURL(context.Background(), uriList, userID)
 	}()
 	writeResponse(w, []byte("Accepted"), http.StatusAccepted)
+}
+
+// GetStats returns total count of short URLs and users
+func (h handler) GetStats(w http.ResponseWriter, r *http.Request) {
+	cURLs, cUsers, err := h.service.GetStats(context.Background())
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	responceBody := struct {
+		URLs  int `json:"urls"`
+		Users int `json:"users"`
+	}{URLs: cURLs, Users: cUsers}
+	responce, err := json.Marshal(responceBody)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	log.Println("GetStats: URLs -", responceBody.URLs, ", Users -", responceBody.Users)
+	writeResponse(w, responce, http.StatusOK)
 }
 
 // PingDatabase provides "ping DB" functionality.

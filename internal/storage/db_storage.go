@@ -150,6 +150,21 @@ func (s URLDBStorage) DeleteBatchData(ctx context.Context, batchID []int, userID
 	results.Close()
 }
 
+// GetStats returns total count of short URLs and users
+func (s URLDBStorage) GetStats(ctx context.Context) (cURLs, cUsers int, err error) {
+	err = s.db.QueryRow(ctx, "SELECT count(ud.id) FROM public.url_data ud WHERE NOT ud.deleted").Scan(&cURLs)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	err = s.db.QueryRow(ctx, "SELECT count(u.id) FROM public.user u").Scan(&cUsers)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	return cURLs, cUsers, nil
+}
+
 // Prepare prepares db storage to work with.
 func (s URLDBStorage) Prepare(ctx context.Context) (err error) {
 	_, err = s.db.Exec(ctx, "CREATE TABLE IF NOT EXISTS public.user (id SERIAL PRIMARY KEY)")

@@ -98,6 +98,11 @@ func (s URLMemStorage) DeleteBatchData(ctx context.Context, batchID []int, userI
 	}
 }
 
+// GetStats returns total count of short URLs and users
+func (s *URLMemStorage) GetStats(ctx context.Context) (cURLs, cUsers int, err error) {
+	return len(s.urls), len(s.users), nil
+}
+
 func (s *URLMemStorage) makeNewUser(ctx context.Context) (userID int, err error) {
 	s.lastUserID += 1
 	return s.lastUserID, nil

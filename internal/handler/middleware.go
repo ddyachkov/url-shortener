@@ -2,6 +2,8 @@ package handler
 
 import (
 	"context"
+	"log"
+	"net"
 	"net/http"
 	"strconv"
 
@@ -44,6 +46,32 @@ func (h handler) SetEncryptedUserID(next http.Handler) http.Handler {
 				return
 			}
 		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+// CheckSubnet checks if request was sent from trusted subnet.
+func (h handler) CheckSubnet(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if h.config.TrustedSubnet == "" {
+			http.Error(w, "Forbidden", http.StatusForbidden)
+			return
+		}
+
+		_, ipNet, err := net.ParseCIDR(h.config.TrustedSubnet)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		reqIPStr := r.Header.Get("X-Real-IP")
+		log.Println(reqIPStr)
+		reqIP := net.ParseIP(reqIPStr)
+		if reqIP == nil || !ipNet.Contains(reqIP) {
+			http.Error(w, "Forbidden", http.StatusForbidden)
+			return
+		}
+
 		next.ServeHTTP(w, r)
 	})
 }

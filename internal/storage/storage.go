@@ -21,6 +21,7 @@ type URLStorage interface {
 	CheckUser(context.Context, int) (int, error)
 	GetUserURL(context.Context, int) ([]URLData, error)
 	DeleteBatchData(context.Context, []int, int)
+	GetStats(context.Context) (int, int, error)
 }
 
 // URLStorage saves URL data
