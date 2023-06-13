@@ -229,6 +229,7 @@ func (h handler) GetUserURL(w http.ResponseWriter, r *http.Request) {
 	userID := r.Context().Value(contextUserIDKey).(int)
 	if userID == 0 {
 		http.Error(w, "[]", http.StatusNoContent)
+		return
 	}
 
 	responceBody, err := h.service.GetURLByUser(r.Context(), userID)
