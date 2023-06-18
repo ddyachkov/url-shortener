@@ -6,6 +6,7 @@ import (
 	"context"
 	"flag"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -14,9 +15,12 @@ import (
 
 	"github.com/ddyachkov/url-shortener/internal/app"
 	"github.com/ddyachkov/url-shortener/internal/config"
+	"github.com/ddyachkov/url-shortener/internal/grpc/proto"
+	gs "github.com/ddyachkov/url-shortener/internal/grpc/server"
 	"github.com/ddyachkov/url-shortener/internal/handler"
 	"github.com/ddyachkov/url-shortener/internal/storage"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"google.golang.org/grpc"
 )
 
 var (
@@ -79,6 +83,20 @@ func main() {
 		}
 	}()
 
+	listen, err := net.Listen("tcp", ":8888")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	grpcServer := grpc.NewServer()
+	proto.RegisterShortenerServer(grpcServer, &gs.ShortenerServer{Service: service, Config: cfg})
+
+	go func() {
+		if err := grpcServer.Serve(listen); err != nil {
+			log.Fatal(err)
+		}
+	}()
+
 	<-quit
 
 	srvCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -86,5 +104,8 @@ func main() {
 	if err = server.Shutdown(srvCtx); err != nil {
 		log.Fatal(err)
 	}
+
+	grpcServer.GracefulStop()
+
 	log.Println("Server stopped")
 }
