@@ -95,6 +95,11 @@ func (sh URLShortener) DeleteUserURL(ctx context.Context, uriList []string, user
 	sh.storage.DeleteBatchData(ctx, idList, userID)
 }
 
+// GetStats returns total count of short URLs and users
+func (sh URLShortener) GetStats(ctx context.Context) (cURLs, cUsers int, err error) {
+	return sh.storage.GetStats(ctx)
+}
+
 // makeURI returns URI from data ID
 func makeURI(id int) (uri string) {
 	const characters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"

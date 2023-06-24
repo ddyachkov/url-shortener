@@ -1,0 +1,73 @@
+syntax = "proto3";
+
+package proto;
+
+option go_package = "github.com/ddyachkov/url-shortener/internal/grpc/proto";
+
+message URLInfo {
+  string url = 1;
+  string short_url = 2;
+}
+
+message CreateShortURLRequest {
+  string url = 1;
+}
+
+message CreateShortURLResponce {
+  string short_url = 1;
+  string error = 2;
+}
+
+message CreateBatchShortURLRequest {
+  repeated string url = 1;
+}
+
+message CreateBatchShortURLResponce {
+  repeated string short_url = 1;
+  string error = 2;
+}
+
+message GetFullURLRequest {
+  string short_url = 1;
+}
+
+message GetFullURLResponce {
+  string url = 1;
+  string error = 2;
+}
+
+message GetUserURLRequest {
+  int32 user_id = 1;
+}
+
+message GetUserURLResponce {
+  repeated URLInfo url_info = 1;
+}
+
+message DeleteUserURLRequest {
+  int32 user_id = 1;
+  repeated string short_url = 2;
+}
+
+message DeleteUserURLResponce {
+  string error = 1;
+}
+
+message GetShortenerStatsRequest {
+  int32 user_id = 1;
+}
+
+message GetShortenerStatsResponce {
+  int32 url_count = 1;
+  int32 user_count = 2;
+}
+
+
+service Shortener {
+    rpc CreateShortURL(CreateShortURLRequest) returns (CreateShortURLResponce);
+    rpc CreateBatchShortURL(CreateBatchShortURLRequest) returns (CreateBatchShortURLResponce);
+    rpc GetFullURL(GetFullURLRequest) returns (GetFullURLResponce);
+    rpc GetUserURL(GetUserURLRequest) returns (GetUserURLResponce);
+    rpc DeleteUserURL(DeleteUserURLRequest) returns (DeleteUserURLResponce);
+    rpc GetShortenerStats(GetShortenerStatsRequest) returns (GetShortenerStatsResponce);
+}

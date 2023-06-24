@@ -18,6 +18,7 @@ var (
 	secretKey       string
 	httpsEnabled    bool
 	configFile      string
+	trustedSubnet   string
 )
 
 // ServerConfig contains server configuration.
@@ -28,6 +29,7 @@ type ServerConfig struct {
 	FileStoragePath string `env:"FILE_STORAGE_PATH" json:"file_storage_path,omitempty"`
 	SecretKey       string `env:"SECRET_KEY" json:"secret_key,omitempty"`
 	HTTPSEnabled    bool   `env:"ENABLE_HTTPS" json:"enable_https,omitempty"`
+	TrustedSubnet   string `env:"TRUSTED_SUBNET" json:"trusted_subnet,omitempty"`
 }
 
 // DefaultServerConfig returns ServerConfig object with values saved from env and flags.
@@ -61,6 +63,9 @@ func DefaultServerConfig() *ServerConfig {
 	if secretKey != "" {
 		cfg.SecretKey = secretKey
 	}
+	if trustedSubnet != "" {
+		cfg.TrustedSubnet = trustedSubnet
+	}
 	if httpsEnabled {
 		cfg.HTTPSEnabled = httpsEnabled
 	}
@@ -84,4 +89,5 @@ func init() {
 	flag.StringVar(&fileStoragePath, "f", "", "file storage path")
 	flag.StringVar(&secretKey, "k", "thisisthirtytwobytelongsecretkey", "secret key")
 	flag.BoolVar(&httpsEnabled, "s", false, "enable https")
+	flag.StringVar(&trustedSubnet, "t", "", "trusted subnet")
 }

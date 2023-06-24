@@ -112,6 +112,11 @@ func (s URLFileStorage) DeleteBatchData(ctx context.Context, batchID []int, user
 	}
 }
 
+// GetStats returns total count of short URLs and users
+func (s *URLFileStorage) GetStats(ctx context.Context) (cURLs, cUsers int, err error) {
+	return len(s.urls), len(s.users), nil
+}
+
 // LoadData loads data from file on disk.
 func (s *URLFileStorage) LoadData() {
 	if _, err := os.Stat(s.config.FileStoragePath); os.IsNotExist(err) {
